@@ -167,9 +167,15 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <div className="mt-8">
+          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" asChild>
               <Link href="/templates">立即开始</Link>
+            </Button>
+            <Button size="lg" variant="outline" asChild>
+              <Link href="/generate">生成合同</Link>
+            </Button>
+            <Button size="lg" variant="outline" asChild>
+              <Link href="/test">功能测试</Link>
             </Button>
           </div>
         </div>
