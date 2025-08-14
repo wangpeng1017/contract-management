@@ -39,6 +39,7 @@ export default function TemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
 
   // 获取模板列表
   const fetchTemplates = async () => {
@@ -72,6 +73,7 @@ export default function TemplatesPage() {
     if (!file) return;
 
     setUploading(true);
+    setUploadProgress('正在上传文件...');
     try {
       // 1. 上传文件
       const formData = new FormData();
@@ -89,6 +91,7 @@ export default function TemplatesPage() {
       }
 
       // 2. 创建模板记录
+      setUploadProgress('正在创建模板记录...');
       const templateResponse = await fetch('/api/templates', {
         method: 'POST',
         headers: {
@@ -105,8 +108,35 @@ export default function TemplatesPage() {
 
       const templateResult = await templateResponse.json();
       if (templateResult.success) {
-        await fetchTemplates();
-        alert('模板上传成功！');
+        // 自动触发AI分析
+        try {
+          setUploadProgress('正在进行AI分析...');
+          setAnalyzing(templateResult.data.id);
+          const analyzeResponse = await fetch('/api/templates/analyze', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              templateId: templateResult.data.id
+            })
+          });
+
+          const analyzeResult = await analyzeResponse.json();
+          if (analyzeResult.success) {
+            await fetchTemplates();
+            alert(`模板上传成功！AI已自动识别到 ${analyzeResult.data.variables.length} 个变量。`);
+          } else {
+            await fetchTemplates();
+            alert('模板上传成功！但AI分析失败，请手动点击"分析模板"按钮。');
+          }
+        } catch (analyzeError) {
+          console.error('自动AI分析失败:', analyzeError);
+          await fetchTemplates();
+          alert('模板上传成功！但AI分析失败，请手动点击"分析模板"按钮。');
+        } finally {
+          setAnalyzing(null);
+        }
       } else {
         throw new Error(templateResult.error);
       }
@@ -116,6 +146,7 @@ export default function TemplatesPage() {
       alert('文件上传失败: ' + (error instanceof Error ? error.message : '未知错误'));
     } finally {
       setUploading(false);
+      setUploadProgress('');
       // 重置文件输入
       event.target.value = '';
     }
@@ -187,9 +218,12 @@ export default function TemplatesPage() {
           />
           <Button asChild disabled={uploading}>
             <label htmlFor="file-upload" className="cursor-pointer">
-              {uploading ? '上传中...' : '上传模板'}
+              {uploading ? (uploadProgress || '上传中...') : '上传模板'}
             </label>
           </Button>
+          {uploading && uploadProgress && (
+            <p className="text-sm text-gray-600 mt-2">{uploadProgress}</p>
+          )}
         </div>
       </div>
 
@@ -241,8 +275,8 @@ export default function TemplatesPage() {
                         : 'bg-gray-100 text-gray-800'
                     }`}
                   >
-                    {template.status === 'active' ? '已激活' : 
-                     template.status === 'processing' ? '处理中' : '未激活'}
+                    {template.status === 'active' ? '已激活' :
+                     template.status === 'processing' ? 'AI分析中' : '未激活'}
                   </span>
                 </div>
               </div>
