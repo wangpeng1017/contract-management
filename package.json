@@ -4,9 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "prisma generate --no-engine && node scripts/check-prisma.js && next build",
     "start": "next start",
     "lint": "next lint",
+    "postinstall": "prisma generate --no-engine",
+    "vercel-build": "prisma generate --no-engine && next build",
+    "check-prisma": "node scripts/check-prisma.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "node prisma/seed.js",
