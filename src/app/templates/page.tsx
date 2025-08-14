@@ -37,6 +37,7 @@ export default function TemplatesPage() {
   const [categories, setCategories] = useState<ContractCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [analyzing, setAnalyzing] = useState<string | null>(null);
 
   // 获取模板列表
   const fetchTemplates = async () => {
@@ -116,6 +117,35 @@ export default function TemplatesPage() {
       setUploading(false);
       // 重置文件输入
       event.target.value = '';
+    }
+  };
+
+  // 分析模板
+  const handleAnalyzeTemplate = async (templateId: string) => {
+    setAnalyzing(templateId);
+    try {
+      const response = await fetch('/api/templates/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          templateId
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        alert(`模板分析成功！识别到 ${result.data.variables.length} 个变量`);
+        await fetchTemplates(); // 刷新模板列表
+      } else {
+        alert('模板分析失败: ' + result.error);
+      }
+    } catch (error) {
+      console.error('模板分析失败:', error);
+      alert('模板分析失败，请稍后重试');
+    } finally {
+      setAnalyzing(null);
     }
   };
 
@@ -224,11 +254,24 @@ export default function TemplatesPage() {
                 <p>创建时间: {new Date(template.createdAt).toLocaleDateString()}</p>
               </div>
               <div className="mt-4 flex space-x-2">
-                <Button size="sm" variant="outline">
-                  查看详情
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleAnalyzeTemplate(template.id)}
+                  disabled={template.status === 'processing' || analyzing === template.id}
+                >
+                  {analyzing === template.id ? '分析中...' :
+                   template.variablesExtracted ? '重新分析' : '分析模板'}
                 </Button>
-                <Button size="sm" variant="outline">
-                  生成合同
+                <Button
+                  size="sm"
+                  variant="outline"
+                  asChild
+                  disabled={!template.variablesExtracted}
+                >
+                  <Link href={`/generate?templateId=${template.id}`}>
+                    生成合同
+                  </Link>
                 </Button>
               </div>
             </CardContent>
