@@ -63,7 +63,7 @@ export default function GeneratePage() {
       if (result.success) {
         setTemplate(result.data);
         // 初始化表单数据
-        const initialData: Record<string, any> = {};
+        const initialData: Record<string, unknown> = {};
         result.data.variables.forEach((variable: ContractVariable) => {
           initialData[variable.name] = variable.defaultValue || '';
         });
