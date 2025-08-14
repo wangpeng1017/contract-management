@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/database';
 import { analyzeContractTemplate } from '@/lib/gemini';
-import { getFileInfo } from '@/lib/blob-storage';
+
 import { parseDocument } from '@/lib/document-parser';
 
 // POST /api/templates/analyze - 分析合同模板并提取变量
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { templateId, content, filePath } = body;
+    const { templateId, content } = body;
 
     if (!templateId) {
       return NextResponse.json(

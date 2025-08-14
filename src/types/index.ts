@@ -31,7 +31,7 @@ export interface ContractTemplateWithRelations {
 export interface ChatSessionWithMessages {
   id: string;
   templateId?: string;
-  collectedVariables: any;
+  collectedVariables: Record<string, unknown>;
   status: string;
   createdAt: Date;
   updatedAt: Date;
@@ -74,7 +74,7 @@ export enum ChatSessionStatus {
 }
 
 // API响应类型
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;

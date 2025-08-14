@@ -93,8 +93,15 @@ export async function POST(request: NextRequest) {
 
 // 生成合同内容
 async function generateContractContent(
-  template: any,
-  variablesData: Record<string, any>
+  template: {
+    name: string;
+    variables: Array<{
+      name: string;
+      type: string;
+      description?: string;
+    }>;
+  },
+  variablesData: Record<string, unknown>
 ): Promise<string> {
   // 获取基础模板内容（这里使用示例内容，实际应用中应该从文件中读取）
   let baseContent = getBaseContractTemplate(template.name);
@@ -257,7 +264,7 @@ function getBaseContractTemplate(templateName: string): string {
 }
 
 // 格式化变量值
-function formatVariableValue(value: any, type: string): string {
+function formatVariableValue(value: unknown, type: string): string {
   if (value === null || value === undefined) {
     return '';
   }

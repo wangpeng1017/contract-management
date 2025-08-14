@@ -61,11 +61,11 @@ export async function POST(request: NextRequest) {
       success: true,
       data: category
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('创建合同分类失败:', error);
     
     // 处理唯一约束错误
-    if (error.code === 'P2002') {
+    if (error instanceof Error && 'code' in error && error.code === 'P2002') {
       return NextResponse.json(
         {
           success: false,

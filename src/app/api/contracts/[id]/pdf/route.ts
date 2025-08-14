@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/database';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 
 // GET /api/contracts/[id]/pdf - 生成并下载合同PDF
 export async function GET(
@@ -62,7 +62,16 @@ export async function GET(
 }
 
 // 生成合同PDF
-async function generateContractPDF(contract: any): Promise<Buffer> {
+async function generateContractPDF(contract: {
+  id: string;
+  templateName: string;
+  content: string;
+  template?: {
+    category?: {
+      name: string;
+    };
+  };
+}): Promise<Buffer> {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',

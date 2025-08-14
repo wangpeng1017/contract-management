@@ -97,7 +97,7 @@ export async function generateChatQuestion(
     description: string;
     required: boolean;
   },
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ): Promise<string> {
   try {
     const contextInfo = context ? `已收集的信息：${JSON.stringify(context, null, 2)}` : '';
@@ -144,7 +144,7 @@ export async function validateUserInput(
   }
 ): Promise<{
   isValid: boolean;
-  normalizedValue?: any;
+  normalizedValue?: unknown;
   error?: string;
   suggestion?: string;
 }> {

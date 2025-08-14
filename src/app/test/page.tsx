@@ -5,13 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 
 export default function TestPage() {
-  const [testResults, setTestResults] = useState<Record<string, any>>({});
+  const [testResults, setTestResults] = useState<Record<string, unknown>>({});
   const [testing, setTesting] = useState(false);
 
   // 测试API接口
   const runTests = async () => {
     setTesting(true);
-    const results: Record<string, any> = {};
+    const results: Record<string, unknown> = {};
 
     try {
       // 测试1: 获取分类列表
@@ -121,8 +121,8 @@ export default function TestPage() {
           // 测试6: 生成合同
           if (analyzeResult.success && analyzeResult.data.variables.length > 0) {
             console.log('测试6: 生成合同');
-            const variablesData: Record<string, any> = {};
-            analyzeResult.data.variables.forEach((variable: any) => {
+            const variablesData: Record<string, unknown> = {};
+            analyzeResult.data.variables.forEach((variable: { name: string; description?: string }) => {
               switch (variable.name) {
                 case '甲方名称':
                   variablesData[variable.name] = '测试公司A';

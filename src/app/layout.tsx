@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,18 +32,18 @@ export default function RootLayout({
           <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-14 items-center">
               <div className="mr-4 hidden md:flex">
-                <a className="mr-6 flex items-center space-x-2" href="/">
+                <Link className="mr-6 flex items-center space-x-2" href="/">
                   <span className="hidden font-bold sm:inline-block">
                     智能合同管理系统
                   </span>
-                </a>
+                </Link>
                 <nav className="flex items-center space-x-6 text-sm font-medium">
-                  <a
+                  <Link
                     className="transition-colors hover:text-foreground/80 text-foreground"
                     href="/"
                   >
                     首页
-                  </a>
+                  </Link>
                   <a
                     className="transition-colors hover:text-foreground/80 text-foreground/60"
                     href="/templates"

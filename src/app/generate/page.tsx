@@ -34,10 +34,15 @@ export default function GeneratePage() {
   const templateId = searchParams.get('templateId');
   
   const [template, setTemplate] = useState<ContractTemplate | null>(null);
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [generatedContract, setGeneratedContract] = useState<any>(null);
+  const [generatedContract, setGeneratedContract] = useState<{
+    contractId: string;
+    content: string;
+    templateName: string;
+    createdAt: string;
+  } | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
@@ -74,7 +79,7 @@ export default function GeneratePage() {
   };
 
   // 处理表单输入
-  const handleInputChange = (variableName: string, value: any) => {
+  const handleInputChange = (variableName: string, value: unknown) => {
     setFormData(prev => ({
       ...prev,
       [variableName]: value
@@ -260,7 +265,7 @@ export default function GeneratePage() {
           <CardHeader>
             <CardTitle>合同生成成功</CardTitle>
             <CardDescription>
-              基于模板 "{template.name}" 生成的合同
+              基于模板 &ldquo;{template.name}&rdquo; 生成的合同
             </CardDescription>
           </CardHeader>
           <CardContent>
