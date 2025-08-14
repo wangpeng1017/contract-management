@@ -1,0 +1,121 @@
+// 智能合同管理系统 Prisma Schema
+// 适配Vercel Postgres数据库
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+// 合同分类表
+model ContractCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String   @default("#3B82F6")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // 关联关系
+  templates ContractTemplate[]
+
+  @@map("contract_categories")
+}
+
+// 合同模板表
+model ContractTemplate {
+  id                String   @id @default(cuid())
+  name              String
+  description       String?
+  categoryId        String?  @map("category_id")
+  filePath          String   @map("file_path")
+  fileName          String   @map("file_name")
+  fileSize          Int?     @map("file_size")
+  mimeType          String?  @map("mime_type")
+  status            String   @default("active") // active, inactive, processing
+  variablesExtracted Boolean @default(false) @map("variables_extracted")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // 关联关系
+  category          ContractCategory?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  variables         ContractVariable[]
+  generatedContracts GeneratedContract[]
+
+  @@map("contract_templates")
+}
+
+// 合同变量表
+model ContractVariable {
+  id              String  @id @default(cuid())
+  templateId      String  @map("template_id")
+  name            String
+  type            String  // text, number, date, email, phone, address, currency, percentage, select, textarea
+  description     String?
+  required        Boolean @default(true)
+  defaultValue    String? @map("default_value")
+  placeholder     String?
+  options         Json?   // 用于select类型的选项
+  validationRules Json?   @map("validation_rules") // 验证规则
+  orderIndex      Int     @default(0) @map("order_index")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // 关联关系
+  template ContractTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, name])
+  @@map("contract_variables")
+}
+
+// 生成的合同表
+model GeneratedContract {
+  id            String   @id @default(cuid())
+  templateId    String?  @map("template_id")
+  templateName  String?  @map("template_name")
+  content       String
+  variablesData Json     @map("variables_data")
+  status        String   @default("draft") // draft, completed, downloaded
+  filePath      String?  @map("file_path") // PDF文件路径
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // 关联关系
+  template ContractTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@map("generated_contracts")
+}
+
+// 聊天会话表
+model ChatSession {
+  id                String   @id @default(cuid())
+  templateId        String?  @map("template_id")
+  collectedVariables Json    @default("{}") @map("collected_variables")
+  status            String   @default("active") // active, completed, cancelled
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // 关联关系
+  messages ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+// 聊天消息表
+model ChatMessage {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  role      String   // user, assistant
+  content   String
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // 关联关系
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
