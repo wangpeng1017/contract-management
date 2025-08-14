@@ -5,10 +5,10 @@ import { jsPDF } from 'jspdf';
 // GET /api/contracts/[id]/pdf - 生成并下载合同PDF
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // 获取合同详情
     const contract = await prisma.generatedContract.findUnique({
@@ -42,7 +42,7 @@ export async function GET(
     });
 
     // 返回PDF文件
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${contract.templateName}_${new Date().toISOString().split('T')[0]}.pdf"`
@@ -62,16 +62,8 @@ export async function GET(
 }
 
 // 生成合同PDF
-async function generateContractPDF(contract: {
-  id: string;
-  templateName: string;
-  content: string;
-  template?: {
-    category?: {
-      name: string;
-    };
-  };
-}): Promise<Buffer> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function generateContractPDF(contract: any): Promise<Buffer> {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',

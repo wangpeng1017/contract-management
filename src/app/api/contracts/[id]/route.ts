@@ -4,10 +4,10 @@ import { prisma } from '@/lib/database';
 // GET /api/contracts/[id] - 获取单个合同详情
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const contract = await prisma.generatedContract.findUnique({
       where: { id },
@@ -55,10 +55,10 @@ export async function GET(
 // PUT /api/contracts/[id] - 更新合同状态
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const { status, filePath } = body;
 
@@ -90,10 +90,10 @@ export async function PUT(
 // DELETE /api/contracts/[id] - 删除合同
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     await prisma.generatedContract.delete({
       where: { id }

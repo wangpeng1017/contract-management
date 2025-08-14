@@ -4,10 +4,10 @@ import { prisma } from '@/lib/database';
 // GET /api/templates/[id] - 获取单个模板详情
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const template = await prisma.contractTemplate.findUnique({
       where: { id },
@@ -57,10 +57,10 @@ export async function GET(
 // PUT /api/templates/[id] - 更新模板信息
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const { name, description, categoryId, status } = body;
 
@@ -102,10 +102,10 @@ export async function PUT(
 // DELETE /api/templates/[id] - 删除模板
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // 删除模板（会级联删除相关的变量和生成的合同）
     await prisma.contractTemplate.delete({

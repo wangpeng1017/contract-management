@@ -1,12 +1,70 @@
-// 从Prisma导入生成的类型
-export type {
-  ContractTemplate,
-  ContractVariable,
-  ContractCategory,
-  GeneratedContract,
-  ChatSession,
-  ChatMessage
-} from '@prisma/client';
+// 基础类型定义
+export interface ContractCategory {
+  id: string;
+  name: string;
+  description?: string;
+  color: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ContractVariable {
+  id: string;
+  templateId: string;
+  name: string;
+  type: string;
+  description: string;
+  required: boolean;
+  placeholder?: string;
+  defaultValue?: string;
+  orderIndex: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ContractTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  categoryId?: string;
+  filePath: string;
+  fileName: string;
+  fileSize?: number;
+  mimeType?: string;
+  status: string;
+  variablesExtracted: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface GeneratedContract {
+  id: string;
+  templateId: string;
+  templateName: string;
+  content: string;
+  variablesData: Record<string, unknown>;
+  status: string;
+  filePath?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ChatSession {
+  id: string;
+  templateId?: string;
+  status: string;
+  collectedVariables: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ChatMessage {
+  id: string;
+  sessionId: string;
+  role: string;
+  content: string;
+  createdAt: Date;
+}
 
 // 扩展的合同模板类型（包含关联数据）
 export interface ContractTemplateWithRelations {

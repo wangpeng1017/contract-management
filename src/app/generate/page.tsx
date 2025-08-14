@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ interface ContractVariable {
   orderIndex: number;
 }
 
-export default function GeneratePage() {
+function GeneratePageContent() {
   const searchParams = useSearchParams();
   const templateId = searchParams.get('templateId');
   
@@ -180,7 +180,7 @@ export default function GeneratePage() {
 
   // 渲染输入字段
   const renderInputField = (variable: ContractVariable) => {
-    const value = formData[variable.name] || '';
+    const value = String(formData[variable.name] || '');
     const hasError = !!errors[variable.name];
     
     switch (variable.type) {
@@ -353,5 +353,13 @@ export default function GeneratePage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function GeneratePage() {
+  return (
+    <Suspense fallback={<div>加载中...</div>}>
+      <GeneratePageContent />
+    </Suspense>
   );
 }

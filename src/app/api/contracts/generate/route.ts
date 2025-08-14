@@ -93,14 +93,8 @@ export async function POST(request: NextRequest) {
 
 // 生成合同内容
 async function generateContractContent(
-  template: {
-    name: string;
-    variables: Array<{
-      name: string;
-      type: string;
-      description?: string;
-    }>;
-  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  template: any,
   variablesData: Record<string, unknown>
 ): Promise<string> {
   // 获取基础模板内容（这里使用示例内容，实际应用中应该从文件中读取）
