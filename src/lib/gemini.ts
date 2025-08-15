@@ -28,20 +28,195 @@ export async function analyzeContractTemplate(content: string): Promise<{
     console.log('Gemini API Key存在:', !!process.env.GOOGLE_GEMINI_API_KEY);
     console.log('分析内容长度:', content.length);
     const prompt = `
-请分析以下合同模板内容，识别出所有需要填写的变量字段。
+请分析以下合同模板内容，识别出所有需要填写的变量字段。请特别关注合同中的关键信息字段。
 
 合同内容：
 ${content}
 
-请按照以下JSON格式返回结果：
+请按照以下JSON格式返回结果，必须包含以下关键变量（如果合同中存在相关信息）：
+
 {
   "variables": [
+    // 基础合同信息
     {
-      "name": "变量名称（英文，使用驼峰命名法）",
-      "type": "变量类型（text/number/date/email/phone/address/currency/percentage/select/textarea）",
-      "description": "变量描述（中文）",
-      "required": true/false,
-      "placeholder": "占位符文本（可选）"
+      "name": "contractNumber",
+      "type": "text",
+      "description": "合同编号",
+      "required": true,
+      "placeholder": "请输入合同编号"
+    },
+    {
+      "name": "signingDate",
+      "type": "date",
+      "description": "签订时间",
+      "required": true,
+      "placeholder": "请选择签订日期"
+    },
+
+    // 甲方信息（采购方）
+    {
+      "name": "buyerCompanyName",
+      "type": "text",
+      "description": "甲方公司名称",
+      "required": true,
+      "placeholder": "广州有限公司"
+    },
+    {
+      "name": "buyerCreditCode",
+      "type": "text",
+      "description": "甲方统一社会信用代码",
+      "required": true,
+      "placeholder": "914401153475269766"
+    },
+
+    // 乙方信息（供货方）
+    {
+      "name": "supplierCompanyName",
+      "type": "text",
+      "description": "乙方公司名称",
+      "required": true,
+      "placeholder": "广州舶源科技有限公司"
+    },
+    {
+      "name": "supplierCreditCode",
+      "type": "text",
+      "description": "乙方统一社会信用代码",
+      "required": true,
+      "placeholder": "91440101MA9XYTH73D"
+    },
+
+    // 货物信息
+    {
+      "name": "vehicleModel",
+      "type": "text",
+      "description": "车型商品名称",
+      "required": true,
+      "placeholder": "驱逐舰05"
+    },
+    {
+      "name": "guidePrice",
+      "type": "currency",
+      "description": "指导价（元/台）",
+      "required": true,
+      "placeholder": "请输入指导价"
+    },
+    {
+      "name": "unitPriceWithTax",
+      "type": "currency",
+      "description": "采购单价含税",
+      "required": true,
+      "placeholder": "请输入含税单价"
+    },
+    {
+      "name": "quantity",
+      "type": "number",
+      "description": "数量（辆）",
+      "required": true,
+      "placeholder": "请输入数量"
+    },
+    {
+      "name": "totalPriceWithTax",
+      "type": "currency",
+      "description": "采购含税总价",
+      "required": true,
+      "placeholder": "请输入含税总价"
+    },
+    {
+      "name": "totalPriceWithoutTax",
+      "type": "currency",
+      "description": "不含税总价",
+      "required": true,
+      "placeholder": "请输入不含税总价"
+    },
+    {
+      "name": "vatAmount",
+      "type": "currency",
+      "description": "增值税金总额",
+      "required": true,
+      "placeholder": "请输入增值税金额"
+    },
+
+    // 合同金额
+    {
+      "name": "contractTotalAmount",
+      "type": "currency",
+      "description": "合同总价数字",
+      "required": true,
+      "placeholder": "请输入合同总价"
+    },
+    {
+      "name": "contractTotalAmountInWords",
+      "type": "text",
+      "description": "合同总价大写",
+      "required": true,
+      "placeholder": "请输入中文大写金额"
+    },
+
+    // 乙方银行信息
+    {
+      "name": "supplierAccountName",
+      "type": "text",
+      "description": "乙方账户名称",
+      "required": true,
+      "placeholder": "广州舶源科技有限公司"
+    },
+    {
+      "name": "supplierBankName",
+      "type": "text",
+      "description": "乙方开户行",
+      "required": true,
+      "placeholder": "招商银行青岛分行市南支行"
+    },
+    {
+      "name": "supplierAccountNumber",
+      "type": "text",
+      "description": "乙方银行账号",
+      "required": true,
+      "placeholder": "532914066410788"
+    },
+
+    // 甲方开票信息
+    {
+      "name": "buyerInvoiceName",
+      "type": "text",
+      "description": "甲方开票名称",
+      "required": true,
+      "placeholder": "广州金港汽车国际贸易有限公司"
+    },
+    {
+      "name": "buyerTaxNumber",
+      "type": "text",
+      "description": "甲方税号",
+      "required": true,
+      "placeholder": "914401153475269766"
+    },
+    {
+      "name": "buyerAddress",
+      "type": "address",
+      "description": "甲方单位地址",
+      "required": true,
+      "placeholder": "广州市南沙区龙穴街港荣一街3号405-4室"
+    },
+    {
+      "name": "buyerPhone",
+      "type": "phone",
+      "description": "甲方电话",
+      "required": true,
+      "placeholder": "020-39002350"
+    },
+    {
+      "name": "buyerBankName",
+      "type": "text",
+      "description": "甲方开户银行",
+      "required": true,
+      "placeholder": "中国建设银行广州黄阁分理处"
+    },
+    {
+      "name": "buyerBankAccount",
+      "type": "text",
+      "description": "甲方银行账户",
+      "required": true,
+      "placeholder": "44050139210100000070"
     }
   ],
   "confidence": 0.95,
@@ -60,7 +235,7 @@ ${content}
 - select: 选择项（如果有固定选项）
 - textarea: 长文本
 
-请仔细分析合同中的占位符、空白处、需要填写的字段，并给出合理的变量类型和描述。
+请基于上述模板，分析合同内容并返回完整的变量列表。如果合同中还有其他重要字段，请一并包含。
 `;
 
     console.log('发送Gemini API请求...');
@@ -85,76 +260,208 @@ ${content}
       console.error('解析Gemini响应失败:', parseError);
     }
 
-    // 如果JSON解析失败，返回一些示例变量
-    console.log('JSON解析失败，返回示例变量');
-    return {
-      variables: [
-        {
-          name: 'companyName',
-          type: 'text' as VariableType,
-          description: '公司名称',
-          required: true,
-          placeholder: '请输入公司名称'
-        },
-        {
-          name: 'contractDate',
-          type: 'date' as VariableType,
-          description: '合同签订日期',
-          required: true,
-          placeholder: '请选择签订日期'
-        },
-        {
-          name: 'contractAmount',
-          type: 'currency' as VariableType,
-          description: '合同金额',
-          required: true,
-          placeholder: '请输入合同金额'
-        }
-      ],
-      confidence: 0.7,
-      suggestions: ['AI分析部分失败，已提供基础变量模板']
-    };
+    // 如果JSON解析失败，返回完整的关键变量模板
+    console.log('JSON解析失败，返回完整变量模板');
+    return getCompleteVariableTemplate();
 
   } catch (error) {
     console.error('Gemini AI分析失败:', error);
-    console.log('返回降级方案：基础变量模板');
+    console.log('返回降级方案：完整变量模板');
 
-    // 不抛出错误，而是返回降级方案
-    return {
-      variables: [
-        {
-          name: 'companyName',
-          type: 'text' as VariableType,
-          description: '公司名称',
-          required: true,
-          placeholder: '请输入公司名称'
-        },
-        {
-          name: 'contractDate',
-          type: 'date' as VariableType,
-          description: '合同签订日期',
-          required: true,
-          placeholder: '请选择签订日期'
-        },
-        {
-          name: 'contractAmount',
-          type: 'currency' as VariableType,
-          description: '合同金额',
-          required: true,
-          placeholder: '请输入合同金额'
-        },
-        {
-          name: 'contactPerson',
-          type: 'text' as VariableType,
-          description: '联系人',
-          required: false,
-          placeholder: '请输入联系人姓名'
-        }
-      ],
-      confidence: 0.6,
-      suggestions: ['AI服务暂时不可用，已提供基础变量模板，您可以手动添加更多变量']
-    };
+    // 不抛出错误，而是返回完整的降级方案
+    return getCompleteVariableTemplate();
   }
+}
+
+// 获取完整的变量模板（降级方案）
+function getCompleteVariableTemplate() {
+  return {
+    variables: [
+      // 基础合同信息
+      {
+        name: 'contractNumber',
+        type: 'text' as VariableType,
+        description: '合同编号',
+        required: true,
+        placeholder: '请输入合同编号'
+      },
+      {
+        name: 'signingDate',
+        type: 'date' as VariableType,
+        description: '签订时间',
+        required: true,
+        placeholder: '请选择签订日期'
+      },
+
+      // 甲方信息（采购方）
+      {
+        name: 'buyerCompanyName',
+        type: 'text' as VariableType,
+        description: '甲方公司名称',
+        required: true,
+        placeholder: '广州有限公司'
+      },
+      {
+        name: 'buyerCreditCode',
+        type: 'text' as VariableType,
+        description: '甲方统一社会信用代码',
+        required: true,
+        placeholder: '914401153475269766'
+      },
+
+      // 乙方信息（供货方）
+      {
+        name: 'supplierCompanyName',
+        type: 'text' as VariableType,
+        description: '乙方公司名称',
+        required: true,
+        placeholder: '广州舶源科技有限公司'
+      },
+      {
+        name: 'supplierCreditCode',
+        type: 'text' as VariableType,
+        description: '乙方统一社会信用代码',
+        required: true,
+        placeholder: '91440101MA9XYTH73D'
+      },
+
+      // 货物信息
+      {
+        name: 'vehicleModel',
+        type: 'text' as VariableType,
+        description: '车型商品名称',
+        required: true,
+        placeholder: '驱逐舰05'
+      },
+      {
+        name: 'guidePrice',
+        type: 'currency' as VariableType,
+        description: '指导价（元/台）',
+        required: true,
+        placeholder: '请输入指导价'
+      },
+      {
+        name: 'unitPriceWithTax',
+        type: 'currency' as VariableType,
+        description: '采购单价含税',
+        required: true,
+        placeholder: '请输入含税单价'
+      },
+      {
+        name: 'quantity',
+        type: 'number' as VariableType,
+        description: '数量（辆）',
+        required: true,
+        placeholder: '请输入数量'
+      },
+      {
+        name: 'totalPriceWithTax',
+        type: 'currency' as VariableType,
+        description: '采购含税总价',
+        required: true,
+        placeholder: '请输入含税总价'
+      },
+      {
+        name: 'totalPriceWithoutTax',
+        type: 'currency' as VariableType,
+        description: '不含税总价',
+        required: true,
+        placeholder: '请输入不含税总价'
+      },
+      {
+        name: 'vatAmount',
+        type: 'currency' as VariableType,
+        description: '增值税金总额',
+        required: true,
+        placeholder: '请输入增值税金额'
+      },
+
+      // 合同金额
+      {
+        name: 'contractTotalAmount',
+        type: 'currency' as VariableType,
+        description: '合同总价数字',
+        required: true,
+        placeholder: '请输入合同总价'
+      },
+      {
+        name: 'contractTotalAmountInWords',
+        type: 'text' as VariableType,
+        description: '合同总价大写',
+        required: true,
+        placeholder: '请输入中文大写金额'
+      },
+
+      // 乙方银行信息
+      {
+        name: 'supplierAccountName',
+        type: 'text' as VariableType,
+        description: '乙方账户名称',
+        required: true,
+        placeholder: '广州舶源科技有限公司'
+      },
+      {
+        name: 'supplierBankName',
+        type: 'text' as VariableType,
+        description: '乙方开户行',
+        required: true,
+        placeholder: '招商银行青岛分行市南支行'
+      },
+      {
+        name: 'supplierAccountNumber',
+        type: 'text' as VariableType,
+        description: '乙方银行账号',
+        required: true,
+        placeholder: '532914066410788'
+      },
+
+      // 甲方开票信息
+      {
+        name: 'buyerInvoiceName',
+        type: 'text' as VariableType,
+        description: '甲方开票名称',
+        required: true,
+        placeholder: '广州金港汽车国际贸易有限公司'
+      },
+      {
+        name: 'buyerTaxNumber',
+        type: 'text' as VariableType,
+        description: '甲方税号',
+        required: true,
+        placeholder: '914401153475269766'
+      },
+      {
+        name: 'buyerAddress',
+        type: 'address' as VariableType,
+        description: '甲方单位地址',
+        required: true,
+        placeholder: '广州市南沙区龙穴街港荣一街3号405-4室'
+      },
+      {
+        name: 'buyerPhone',
+        type: 'phone' as VariableType,
+        description: '甲方电话',
+        required: true,
+        placeholder: '020-39002350'
+      },
+      {
+        name: 'buyerBankName',
+        type: 'text' as VariableType,
+        description: '甲方开户银行',
+        required: true,
+        placeholder: '中国建设银行广州黄阁分理处'
+      },
+      {
+        name: 'buyerBankAccount',
+        type: 'text' as VariableType,
+        description: '甲方银行账户',
+        required: true,
+        placeholder: '44050139210100000070'
+      }
+    ],
+    confidence: 0.8,
+    suggestions: ['AI服务暂时不可用，已提供完整的合同变量模板，包含22个关键字段']
+  };
 }
 
 // 生成对话式问题
