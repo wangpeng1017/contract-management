@@ -117,7 +117,43 @@ ${content}
 
   } catch (error) {
     console.error('Gemini AI分析失败:', error);
-    throw new Error('AI分析失败，请稍后重试');
+    console.log('返回降级方案：基础变量模板');
+
+    // 不抛出错误，而是返回降级方案
+    return {
+      variables: [
+        {
+          name: 'companyName',
+          type: 'text' as VariableType,
+          description: '公司名称',
+          required: true,
+          placeholder: '请输入公司名称'
+        },
+        {
+          name: 'contractDate',
+          type: 'date' as VariableType,
+          description: '合同签订日期',
+          required: true,
+          placeholder: '请选择签订日期'
+        },
+        {
+          name: 'contractAmount',
+          type: 'currency' as VariableType,
+          description: '合同金额',
+          required: true,
+          placeholder: '请输入合同金额'
+        },
+        {
+          name: 'contactPerson',
+          type: 'text' as VariableType,
+          description: '联系人',
+          required: false,
+          placeholder: '请输入联系人姓名'
+        }
+      ],
+      confidence: 0.6,
+      suggestions: ['AI服务暂时不可用，已提供基础变量模板，您可以手动添加更多变量']
+    };
   }
 }
 
