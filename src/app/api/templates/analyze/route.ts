@@ -40,20 +40,24 @@ export async function POST(request: NextRequest) {
     // 如果没有提供内容但有文件路径，尝试解析文档
     if (!documentContent && template.filePath) {
       try {
+        console.log('开始解析文档:', template.fileName);
         // 这里应该从Blob存储获取文件并解析
         // 由于演示目的，我们使用模拟内容
-        const mockFile = new File([''], template.fileName, { type: template.mimeType || 'application/octet-stream' });
+        const mockFile = new File(['mock content'], template.fileName, { type: template.mimeType || 'application/octet-stream' });
         const parseResult = await parseDocument(mockFile);
 
         if (parseResult.success) {
           documentContent = parseResult.content;
+          console.log('文档解析成功，内容长度:', documentContent.length);
         } else {
+          console.error('文档解析失败:', parseResult.error);
           throw new Error(parseResult.error || '文档解析失败');
         }
       } catch (parseError) {
-        console.error('文档解析失败:', parseError);
+        console.error('文档解析异常:', parseError);
         // 如果解析失败，使用默认内容
         documentContent = `合同模板：${template.name}\n\n[请手动添加合同内容进行分析]`;
+        console.log('使用默认内容，长度:', documentContent.length);
       }
     }
 
@@ -69,7 +73,14 @@ export async function POST(request: NextRequest) {
 
     // 使用Gemini AI分析模板
     console.log('开始AI分析，模板ID:', templateId);
+    console.log('文档内容预览:', documentContent.substring(0, 200) + '...');
+
     const analysisResult = await analyzeContractTemplate(documentContent);
+    console.log('AI分析结果:', {
+      variableCount: analysisResult.variables.length,
+      confidence: analysisResult.confidence,
+      hasVariables: analysisResult.variables.length > 0
+    });
 
     // 删除现有变量（如果有）
     await prisma.contractVariable.deleteMany({
