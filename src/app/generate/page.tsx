@@ -618,7 +618,7 @@ function GeneratePageContent() {
     ).length;
 
     return (
-      <Card key={module.id} className={`${module.color} transition-all duration-200 hover:shadow-md`}>
+      <Card key={module.id} className={`${module.color} transition-all duration-200 hover:shadow-lg border-2`}>
         <Collapsible open={!isCollapsed} onOpenChange={() => toggleModule(module.id)}>
           <CollapsibleTrigger asChild>
             <CardHeader className="cursor-pointer hover:bg-opacity-80 transition-colors">
@@ -681,7 +681,7 @@ function GeneratePageContent() {
     const IconComponent = module.icon;
 
     return (
-      <Card key={module.id} className={`${module.color} transition-all duration-200 hover:shadow-md`}>
+      <Card key={module.id} className={`${module.color} transition-all duration-200 hover:shadow-lg border-2`}>
         <Collapsible open={!isCollapsed} onOpenChange={() => toggleModule(module.id)}>
           <CollapsibleTrigger asChild>
             <CardHeader className="cursor-pointer hover:bg-opacity-80 transition-colors">
@@ -843,9 +843,90 @@ function GeneratePageContent() {
           </Card>
         </div>
 
-        {/* 模块化表单 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {VARIABLE_MODULES.map(module => renderVariableModule(module))}
+        {/* 模块化表单 - 优化4行布局 */}
+        <div className="space-y-10 mb-8">
+          {/* 第一行：基础合同信息（全宽） */}
+          <div className="w-full">
+            <div className="relative">
+              <div className="absolute -top-2 -left-2 w-1 h-8 bg-blue-500 rounded-full"></div>
+              <div className="mb-2">
+                <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                  第一步：基础信息
+                </span>
+              </div>
+              {renderVariableModule(VARIABLE_MODULES.find(m => m.id === 'basic')!)}
+            </div>
+          </div>
+
+          {/* 分隔线 */}
+          <div className="flex items-center justify-center">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+            <div className="px-4 text-xs text-gray-500 font-medium">合同主体信息</div>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+          </div>
+
+          {/* 第二行：甲方信息 + 乙方信息（并排） */}
+          <div className="space-y-4">
+            <div className="text-center">
+              <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                第二步：合同主体
+              </span>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="relative order-1">
+                <div className="absolute -top-2 -left-2 w-1 h-8 bg-green-500 rounded-full"></div>
+                <div className="lg:pr-3">
+                  {renderVariableModule(VARIABLE_MODULES.find(m => m.id === 'buyer')!)}
+                </div>
+              </div>
+              <div className="relative order-2">
+                <div className="absolute -top-2 -left-2 w-1 h-8 bg-purple-500 rounded-full"></div>
+                <div className="lg:pl-3">
+                  {renderVariableModule(VARIABLE_MODULES.find(m => m.id === 'supplier')!)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 分隔线 */}
+          <div className="flex items-center justify-center">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+            <div className="px-4 text-xs text-gray-500 font-medium">商品与金额</div>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+          </div>
+
+          {/* 第三行：货物信息（全宽） */}
+          <div className="w-full">
+            <div className="relative">
+              <div className="absolute -top-2 -left-2 w-1 h-8 bg-orange-500 rounded-full"></div>
+              <div className="mb-2">
+                <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
+                  第三步：货物详情
+                </span>
+              </div>
+              {renderVariableModule(VARIABLE_MODULES.find(m => m.id === 'goods')!)}
+            </div>
+          </div>
+
+          {/* 分隔线 */}
+          <div className="flex items-center justify-center">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+            <div className="px-4 text-xs text-gray-500 font-medium">最终确认</div>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+          </div>
+
+          {/* 第四行：合同金额（全宽） */}
+          <div className="w-full">
+            <div className="relative">
+              <div className="absolute -top-2 -left-2 w-1 h-8 bg-yellow-500 rounded-full"></div>
+              <div className="mb-2">
+                <span className="text-xs font-medium text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full">
+                  第四步：合同金额
+                </span>
+              </div>
+              {renderVariableModule(VARIABLE_MODULES.find(m => m.id === 'amount')!)}
+            </div>
+          </div>
         </div>
 
         {/* 操作按钮 */}
