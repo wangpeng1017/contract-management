@@ -11,6 +11,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ChevronDown, ChevronUp, FileText, Building, Building2, Package, DollarSign, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import ContractPreview from '@/components/ContractPreview';
+import ContractEditor from '@/components/ContractEditor';
 
 interface ContractTemplate {
   id: string;
@@ -123,10 +125,21 @@ function GeneratePageContent() {
     content: string;
     templateName: string;
     createdAt: string;
+    variablesData: Record<string, unknown>;
+    goodsItems?: GoodsItem[];
+    goodsSummary?: {
+      totalQuantity: number;
+      totalPriceWithTax: number;
+      totalPriceWithoutTax: number;
+      totalVatAmount: number;
+    };
   } | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadingWord, setDownloadingWord] = useState(false);
   const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [goodsItems, setGoodsItems] = useState<GoodsItem[]>([
     {
       id: '1',
@@ -365,7 +378,14 @@ function GeneratePageContent() {
       const result = await response.json();
       
       if (result.success) {
-        setGeneratedContract(result.data);
+        setGeneratedContract({
+          ...result.data,
+          variablesData: {
+            ...formData
+          },
+          goodsItems: goodsItems,
+          goodsSummary: getGoodsSummary()
+        });
       } else {
         alert('合同生成失败: ' + result.error);
       }
@@ -404,6 +424,83 @@ function GeneratePageContent() {
     } finally {
       setDownloadingPdf(false);
     }
+  };
+
+  // 下载Word
+  const handleDownloadWord = async () => {
+    if (!generatedContract?.contractId) return;
+
+    setDownloadingWord(true);
+    try {
+      const response = await fetch(`/api/contracts/${generatedContract.contractId}/word`);
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${generatedContract.templateName}_${new Date().toISOString().split('T')[0]}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      } else {
+        alert('Word下载失败');
+      }
+    } catch (error) {
+      console.error('Word下载失败:', error);
+      alert('Word下载失败，请稍后重试');
+    } finally {
+      setDownloadingWord(false);
+    }
+  };
+
+  // 编辑合同
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  // 保存编辑
+  const handleSaveEdit = async (updatedContract: typeof generatedContract) => {
+    if (!updatedContract) return;
+
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/contracts/${updatedContract.contractId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: updatedContract.content,
+          variablesData: updatedContract.variablesData
+        })
+      });
+
+      if (response.ok) {
+        setGeneratedContract(updatedContract);
+        setIsEditing(false);
+        alert('合同保存成功');
+      } else {
+        alert('合同保存失败');
+      }
+    } catch (error) {
+      console.error('合同保存失败:', error);
+      alert('合同保存失败，请稍后重试');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 取消编辑
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+  };
+
+  // 重新生成
+  const handleRegenerate = () => {
+    setGeneratedContract(null);
+    setIsEditing(false);
   };
 
   // 渲染输入字段
@@ -769,43 +866,27 @@ function GeneratePageContent() {
   }
 
   if (generatedContract) {
+    if (isEditing) {
+      return (
+        <ContractEditor
+          contract={generatedContract}
+          onSave={handleSaveEdit}
+          onCancel={handleCancelEdit}
+          saving={saving}
+        />
+      );
+    }
+
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>合同生成成功</CardTitle>
-            <CardDescription>
-              基于模板 &ldquo;{template.name}&rdquo; 生成的合同
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold mb-2">合同内容预览：</h3>
-                <pre className="whitespace-pre-wrap text-sm">
-                  {generatedContract.content}
-                </pre>
-              </div>
-              
-              <div className="flex space-x-4">
-                <Button onClick={() => setGeneratedContract(null)}>
-                  重新生成
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleDownloadPdf}
-                  disabled={downloadingPdf}
-                >
-                  {downloadingPdf ? '下载中...' : '下载PDF'}
-                </Button>
-                <Button variant="outline" asChild>
-                  <Link href="/templates">返回模板</Link>
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <ContractPreview
+        contract={generatedContract}
+        onEdit={handleEdit}
+        onDownloadPdf={handleDownloadPdf}
+        onDownloadWord={handleDownloadWord}
+        onRegenerate={handleRegenerate}
+        downloadingPdf={downloadingPdf}
+        downloadingWord={downloadingWord}
+      />
     );
   }
 

@@ -52,7 +52,7 @@ export async function GET(
   }
 }
 
-// PUT /api/contracts/[id] - 更新合同状态
+// PUT /api/contracts/[id] - 更新合同内容或状态
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -60,14 +60,18 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { status, filePath } = body;
+    const { status, filePath, content, variablesData } = body;
+
+    const updateData: Record<string, unknown> = {};
+
+    if (status) updateData.status = status;
+    if (filePath) updateData.filePath = filePath;
+    if (content) updateData.content = content;
+    if (variablesData) updateData.variablesData = variablesData;
 
     const contract = await prisma.generatedContract.update({
       where: { id },
-      data: {
-        ...(status && { status }),
-        ...(filePath && { filePath })
-      }
+      data: updateData
     });
 
     return NextResponse.json({
