@@ -335,18 +335,53 @@ function GeneratePageContent() {
   // 验证表单
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!template) return false;
-    
+
+    // 货物相关变量列表
+    const goodsVariables = ['vehicleModel', 'guidePrice', 'unitPriceWithTax', 'quantity', 'totalPriceWithTax', 'totalPriceWithoutTax', 'vatAmount'];
+
     template.variables.forEach(variable => {
       if (variable.required) {
-        const value = formData[variable.name];
-        if (!value || value.toString().trim() === '') {
+        let isValid = false;
+
+        // 如果是货物相关字段，从goodsItems中验证
+        if (goodsVariables.includes(variable.name)) {
+          // 检查是否有有效的货物项目
+          const hasValidGoods = goodsItems.some(item => {
+            switch (variable.name) {
+              case 'vehicleModel':
+                return item.vehicleModel && item.vehicleModel.trim() !== '';
+              case 'guidePrice':
+                return item.guidePrice > 0;
+              case 'unitPriceWithTax':
+                return item.unitPriceWithTax > 0;
+              case 'quantity':
+                return item.quantity > 0;
+              case 'totalPriceWithTax':
+                return item.totalPriceWithTax > 0;
+              case 'totalPriceWithoutTax':
+                return item.totalPriceWithoutTax > 0;
+              case 'vatAmount':
+                return item.vatAmount > 0;
+              default:
+                return false;
+            }
+          });
+
+          isValid = hasValidGoods;
+        } else {
+          // 非货物字段，从formData中验证
+          const value = formData[variable.name];
+          isValid = value !== undefined && value !== null && value.toString().trim() !== '';
+        }
+
+        if (!isValid) {
           newErrors[variable.name] = `${variable.description}不能为空`;
         }
       }
     });
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
