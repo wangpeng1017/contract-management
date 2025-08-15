@@ -391,9 +391,31 @@ function GeneratePageContent() {
     if (!validateForm()) {
       return;
     }
-    
+
     setGenerating(true);
     try {
+      // 构造完整的变量数据，将货物信息映射到顶层字段
+      const mappedVariablesData = {
+        ...formData,
+        // 保留原始货物数据结构
+        goodsItems: goodsItems,
+        goodsSummary: getGoodsSummary()
+      };
+
+      // 如果有货物数据，将第一个货物的信息映射到顶层字段（用于模板变量替换）
+      if (goodsItems.length > 0) {
+        const firstGoods = goodsItems[0];
+        mappedVariablesData.vehicleModel = firstGoods.vehicleModel;
+        mappedVariablesData.guidePrice = firstGoods.guidePrice;
+        mappedVariablesData.unitPriceWithTax = firstGoods.unitPriceWithTax;
+        mappedVariablesData.quantity = firstGoods.quantity;
+        mappedVariablesData.totalPriceWithTax = firstGoods.totalPriceWithTax;
+        mappedVariablesData.totalPriceWithoutTax = firstGoods.totalPriceWithoutTax;
+        mappedVariablesData.vatAmount = firstGoods.vatAmount;
+      }
+
+
+
       const response = await fetch('/api/contracts/generate', {
         method: 'POST',
         headers: {
@@ -402,11 +424,7 @@ function GeneratePageContent() {
         body: JSON.stringify({
           templateId: template?.id,
           templateName: template?.name,
-          variablesData: {
-            ...formData,
-            goodsItems: goodsItems,
-            goodsSummary: getGoodsSummary()
-          }
+          variablesData: mappedVariablesData
         })
       });
       
