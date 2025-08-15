@@ -47,6 +47,7 @@ export default function TemplatesPage() {
       const response = await fetch('/api/templates');
       const result = await response.json();
       if (result.success) {
+        console.log('模板数据:', result.data.templates);
         setTemplates(result.data.templates);
       }
     } catch (error) {
@@ -293,7 +294,8 @@ export default function TemplatesPage() {
                   size="sm"
                   variant="outline"
                   onClick={() => handleAnalyzeTemplate(template.id)}
-                  disabled={template.status === 'processing' || analyzing === template.id}
+                  disabled={analyzing === template.id}
+                  title={analyzing === template.id ? '正在分析中，请稍候' : '点击分析模板变量'}
                 >
                   {analyzing === template.id ? '分析中...' :
                    template.variablesExtracted ? '重新分析' : '分析模板'}
@@ -303,12 +305,19 @@ export default function TemplatesPage() {
                   variant="outline"
                   asChild
                   disabled={!template.variablesExtracted}
+                  title={!template.variablesExtracted ? '请先分析模板以提取变量' : '点击生成合同'}
                 >
                   <Link href={`/generate?templateId=${template.id}`}>
                     生成合同
                   </Link>
                 </Button>
               </div>
+              {/* 调试信息 */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="mt-2 text-xs text-gray-500">
+                  状态: {template.status} | 变量已提取: {template.variablesExtracted ? '是' : '否'} | 变量数: {template._count.variables}
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
