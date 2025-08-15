@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronUp, FileText, Building, Building2, Package, DollarSign, CheckCircle } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ChevronDown, ChevronUp, FileText, Building, Building2, Package, DollarSign, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
 interface ContractTemplate {
@@ -33,6 +34,17 @@ interface ContractVariable {
   orderIndex: number;
 }
 
+interface GoodsItem {
+  id: string;
+  vehicleModel: string;
+  guidePrice: number;
+  unitPriceWithTax: number;
+  quantity: number;
+  totalPriceWithTax: number;
+  totalPriceWithoutTax: number;
+  vatAmount: number;
+}
+
 interface VariableModule {
   id: string;
   title: string;
@@ -40,6 +52,7 @@ interface VariableModule {
   icon: React.ComponentType<{ className?: string }>;
   color: string;
   variables: string[];
+  isTable?: boolean; // 标记是否为表格模块
 }
 
 // 定义变量分组模块
@@ -78,13 +91,14 @@ const VARIABLE_MODULES: VariableModule[] = [
   {
     id: 'goods',
     title: '货物信息',
-    description: '商品详情、价格和数量信息',
+    description: '商品详情、价格和数量信息（支持多货物）',
     icon: Package,
     color: 'bg-orange-50 border-orange-200',
     variables: [
       'vehicleModel', 'guidePrice', 'unitPriceWithTax', 'quantity',
       'totalPriceWithTax', 'totalPriceWithoutTax', 'vatAmount'
-    ]
+    ],
+    isTable: true
   },
   {
     id: 'amount',
@@ -113,21 +127,68 @@ function GeneratePageContent() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
+  const [goodsItems, setGoodsItems] = useState<GoodsItem[]>([
+    {
+      id: '1',
+      vehicleModel: '驱逐舰05',
+      guidePrice: 0,
+      unitPriceWithTax: 0,
+      quantity: 1,
+      totalPriceWithTax: 0,
+      totalPriceWithoutTax: 0,
+      vatAmount: 0
+    }
+  ]);
 
   // 计算填写进度
   const calculateProgress = () => {
     if (!template) return 0;
-    const requiredVariables = template.variables.filter(v => v.required);
+
+    // 分离货物相关变量和其他变量
+    const goodsVariables = ['vehicleModel', 'guidePrice', 'unitPriceWithTax', 'quantity', 'totalPriceWithTax', 'totalPriceWithoutTax', 'vatAmount'];
+    const requiredVariables = template.variables.filter(v => v.required && !goodsVariables.includes(v.name));
+
+    // 计算非货物字段的完成度
     const filledRequired = requiredVariables.filter(v => {
       const value = formData[v.name];
       return value !== undefined && value !== null && value !== '';
     });
-    return Math.round((filledRequired.length / requiredVariables.length) * 100);
+
+    // 计算货物表格的完成度
+    const completedGoodsItems = goodsItems.filter(item =>
+      item.vehicleModel.trim() !== '' &&
+      item.unitPriceWithTax > 0 &&
+      item.quantity > 0
+    ).length;
+
+    const goodsProgress = goodsItems.length > 0 ? completedGoodsItems / goodsItems.length : 0;
+
+    // 综合计算进度（货物表格作为一个整体模块）
+    const totalModules = requiredVariables.length + 1; // +1 for goods table
+    const completedModules = filledRequired.length + goodsProgress;
+
+    return Math.round((completedModules / totalModules) * 100);
   };
 
   // 计算模块完成状态
   const getModuleCompletionStatus = (moduleVariables: string[]) => {
     if (!template) return { completed: 0, total: 0, percentage: 0 };
+
+    // 如果是货物模块，使用特殊计算逻辑
+    const goodsVariables = ['vehicleModel', 'guidePrice', 'unitPriceWithTax', 'quantity', 'totalPriceWithTax', 'totalPriceWithoutTax', 'vatAmount'];
+    if (moduleVariables.some(v => goodsVariables.includes(v))) {
+      const completedItems = goodsItems.filter(item =>
+        item.vehicleModel.trim() !== '' &&
+        item.unitPriceWithTax > 0 &&
+        item.quantity > 0
+      ).length;
+
+      return {
+        completed: completedItems,
+        total: goodsItems.length,
+        percentage: goodsItems.length > 0 ? Math.round((completedItems / goodsItems.length) * 100) : 0
+      };
+    }
 
     const moduleTemplateVars = template.variables.filter(v =>
       moduleVariables.includes(v.name) && v.required
@@ -150,6 +211,63 @@ function GeneratePageContent() {
       ...prev,
       [moduleId]: !prev[moduleId]
     }));
+  };
+
+  // 货物表格操作函数
+  const addGoodsItem = () => {
+    const newItem: GoodsItem = {
+      id: Date.now().toString(),
+      vehicleModel: '',
+      guidePrice: 0,
+      unitPriceWithTax: 0,
+      quantity: 1,
+      totalPriceWithTax: 0,
+      totalPriceWithoutTax: 0,
+      vatAmount: 0
+    };
+    setGoodsItems(prev => [...prev, newItem]);
+  };
+
+  const removeGoodsItem = (id: string) => {
+    if (goodsItems.length > 1) {
+      setGoodsItems(prev => prev.filter(item => item.id !== id));
+    }
+  };
+
+  const updateGoodsItem = (id: string, field: keyof GoodsItem, value: string | number) => {
+    setGoodsItems(prev => prev.map(item => {
+      if (item.id === id) {
+        const updatedItem = { ...item, [field]: value };
+
+        // 自动计算相关金额
+        if (field === 'unitPriceWithTax' || field === 'quantity') {
+          const unitPrice = field === 'unitPriceWithTax' ? Number(value) : updatedItem.unitPriceWithTax;
+          const qty = field === 'quantity' ? Number(value) : updatedItem.quantity;
+
+          updatedItem.totalPriceWithTax = unitPrice * qty;
+          updatedItem.totalPriceWithoutTax = updatedItem.totalPriceWithTax / 1.13; // 假设13%增值税
+          updatedItem.vatAmount = updatedItem.totalPriceWithTax - updatedItem.totalPriceWithoutTax;
+        }
+
+        return updatedItem;
+      }
+      return item;
+    }));
+  };
+
+  // 计算货物汇总信息
+  const getGoodsSummary = () => {
+    return goodsItems.reduce((summary, item) => ({
+      totalQuantity: summary.totalQuantity + item.quantity,
+      totalPriceWithTax: summary.totalPriceWithTax + item.totalPriceWithTax,
+      totalPriceWithoutTax: summary.totalPriceWithoutTax + item.totalPriceWithoutTax,
+      totalVatAmount: summary.totalVatAmount + item.vatAmount
+    }), {
+      totalQuantity: 0,
+      totalPriceWithTax: 0,
+      totalPriceWithoutTax: 0,
+      totalVatAmount: 0
+    });
   };
 
   // 获取模板详情
@@ -236,7 +354,11 @@ function GeneratePageContent() {
         body: JSON.stringify({
           templateId: template?.id,
           templateName: template?.name,
-          variablesData: formData
+          variablesData: {
+            ...formData,
+            goodsItems: goodsItems,
+            goodsSummary: getGoodsSummary()
+          }
         })
       });
       
@@ -336,8 +458,218 @@ function GeneratePageContent() {
     }
   };
 
+  // 渲染货物表格
+  const renderGoodsTable = () => {
+    const summary = getGoodsSummary();
+
+    return (
+      <div className="space-y-4">
+        {/* 表格头部操作 */}
+        <div className="flex justify-between items-center">
+          <div className="text-sm text-gray-600">
+            共 {goodsItems.length} 项货物
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addGoodsItem}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            新增货物
+          </Button>
+        </div>
+
+        {/* 响应式表格容器 */}
+        <div className="border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="w-12 text-center">序号</TableHead>
+                  <TableHead className="min-w-[120px]">车型商品名称</TableHead>
+                  <TableHead className="min-w-[100px]">指导价(元)</TableHead>
+                  <TableHead className="min-w-[120px]">采购单价含税(元)</TableHead>
+                  <TableHead className="min-w-[80px]">数量(辆)</TableHead>
+                  <TableHead className="min-w-[120px]">含税总价(元)</TableHead>
+                  <TableHead className="min-w-[120px]">不含税总价(元)</TableHead>
+                  <TableHead className="min-w-[100px]">增值税金(元)</TableHead>
+                  <TableHead className="w-20 text-center">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {goodsItems.map((item, index) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="text-center font-medium">
+                      {index + 1}
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        value={item.vehicleModel}
+                        onChange={(e) => updateGoodsItem(item.id, 'vehicleModel', e.target.value)}
+                        placeholder="请输入车型名称"
+                        className="min-w-[120px]"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        value={item.guidePrice || ''}
+                        onChange={(e) => updateGoodsItem(item.id, 'guidePrice', parseFloat(e.target.value) || 0)}
+                        placeholder="0"
+                        className="min-w-[100px]"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        value={item.unitPriceWithTax || ''}
+                        onChange={(e) => updateGoodsItem(item.id, 'unitPriceWithTax', parseFloat(e.target.value) || 0)}
+                        placeholder="0"
+                        className="min-w-[120px]"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        value={item.quantity || ''}
+                        onChange={(e) => updateGoodsItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                        placeholder="1"
+                        min="1"
+                        className="min-w-[80px]"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-right font-medium">
+                        {item.totalPriceWithTax.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-right">
+                        {item.totalPriceWithoutTax.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-right">
+                        {item.vatAmount.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeGoodsItem(item.id)}
+                        disabled={goodsItems.length <= 1}
+                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        {/* 汇总信息 */}
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <span className="text-gray-600">总数量：</span>
+              <span className="font-medium">{summary.totalQuantity} 辆</span>
+            </div>
+            <div>
+              <span className="text-gray-600">含税总价：</span>
+              <span className="font-medium text-blue-600">
+                ¥{summary.totalPriceWithTax.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-600">不含税总价：</span>
+              <span className="font-medium">
+                ¥{summary.totalPriceWithoutTax.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-600">增值税总额：</span>
+              <span className="font-medium">
+                ¥{summary.totalVatAmount.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // 渲染货物表格模块
+  const renderGoodsTableModule = (module: VariableModule) => {
+    const isCollapsed = collapsedModules[module.id];
+    const IconComponent = module.icon;
+
+    // 计算货物模块完成状态
+    const completedItems = goodsItems.filter(item =>
+      item.vehicleModel.trim() !== '' &&
+      item.unitPriceWithTax > 0 &&
+      item.quantity > 0
+    ).length;
+
+    return (
+      <Card key={module.id} className={`${module.color} transition-all duration-200 hover:shadow-md`}>
+        <Collapsible open={!isCollapsed} onOpenChange={() => toggleModule(module.id)}>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-opacity-80 transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <IconComponent className="h-5 w-5" />
+                  <div>
+                    <CardTitle className="text-lg">{module.title}</CardTitle>
+                    <CardDescription className="text-sm">
+                      {module.description}
+                    </CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={completedItems === goodsItems.length ? "default" : "secondary"}>
+                    {completedItems}/{goodsItems.length}
+                  </Badge>
+                  {completedItems === goodsItems.length && (
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  )}
+                  {isCollapsed ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronUp className="h-4 w-4" />
+                  )}
+                </div>
+              </div>
+              <Progress
+                value={goodsItems.length > 0 ? (completedItems / goodsItems.length) * 100 : 0}
+                className="mt-2"
+              />
+            </CardHeader>
+          </CollapsibleTrigger>
+
+          <CollapsibleContent>
+            <CardContent className="pt-0">
+              {renderGoodsTable()}
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+    );
+  };
+
   // 渲染变量模块
   const renderVariableModule = (module: VariableModule) => {
+    // 如果是货物表格模块，使用特殊渲染
+    if (module.isTable && module.id === 'goods') {
+      return renderGoodsTableModule(module);
+    }
+
     const moduleVariables = template?.variables.filter(v =>
       module.variables.includes(v.name)
     ).sort((a, b) => a.orderIndex - b.orderIndex) || [];
