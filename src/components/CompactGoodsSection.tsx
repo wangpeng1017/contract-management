@@ -30,8 +30,6 @@ export default function CompactGoodsSection({
   setGoodsItems, 
   onAmountChange 
 }: CompactGoodsSectionProps) {
-  const [editingId, setEditingId] = useState<string | null>(null);
-
   // 添加新货物
   const addGoodsItem = () => {
     const newItem: GoodsItem = {
@@ -45,7 +43,6 @@ export default function CompactGoodsSection({
       vatAmount: 0
     };
     setGoodsItems([...goodsItems, newItem]);
-    setEditingId(newItem.id);
   };
 
   // 删除货物

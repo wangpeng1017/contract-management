@@ -59,15 +59,52 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
+
+    if (!id) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: '合同ID不能为空'
+        },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const { status, filePath, content, variablesData } = body;
 
     const updateData: Record<string, unknown> = {};
 
-    if (status) updateData.status = status;
-    if (filePath) updateData.filePath = filePath;
-    if (content) updateData.content = content;
-    if (variablesData) updateData.variablesData = variablesData;
+    if (status !== undefined) updateData.status = status;
+    if (filePath !== undefined) updateData.filePath = filePath;
+    if (content !== undefined) updateData.content = content;
+    if (variablesData !== undefined) updateData.variablesData = variablesData;
+
+    // 检查是否有数据需要更新
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: '没有提供需要更新的数据'
+        },
+        { status: 400 }
+      );
+    }
+
+    // 先检查合同是否存在
+    const existingContract = await prisma.generatedContract.findUnique({
+      where: { id }
+    });
+
+    if (!existingContract) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: '合同不存在'
+        },
+        { status: 404 }
+      );
+    }
 
     const contract = await prisma.generatedContract.update({
       where: { id },
@@ -81,10 +118,17 @@ export async function PUT(
 
   } catch (error) {
     console.error('更新合同失败:', error);
+
+    // 提供更详细的错误信息
+    let errorMessage = '更新合同失败';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+
     return NextResponse.json(
       {
         success: false,
-        error: '更新合同失败'
+        error: errorMessage
       },
       { status: 500 }
     );

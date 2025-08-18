@@ -397,7 +397,7 @@ function GeneratePageContent() {
     setGenerating(true);
     try {
       // 构造完整的变量数据，将货物信息映射到顶层字段
-      const mappedVariablesData = {
+      const mappedVariablesData: Record<string, unknown> = {
         ...formData,
         // 保留原始货物数据结构
         goodsItems: goodsItems,

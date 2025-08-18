@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>测试合同生成</title>
+</head>
+<body>
+    <h1>测试合同生成API</h1>
+    <button onclick="testContractGeneration()">测试生成合同</button>
+    <div id="result"></div>
+
+    <script>
+        async function testContractGeneration() {
+            const testData = {
+                templateId: "cmec6aac70000hdfm7v019rcq",
+                templateName: "金港汽车采购合同模板",
+                variablesData: {
+                    // 基础信息
+                    contractId: "HT-2025-001",
+                    signDate: "2025-01-15",
+                    
+                    // 甲方信息
+                    buyerCompanyName: "广州金港汽车国际贸易有限公司",
+                    buyerCreditCode: "914401153475269766",
+                    buyerInvoiceName: "广州金港汽车国际贸易有限公司",
+                    buyerTaxNumber: "914401153475269766",
+                    buyerAddress: "广州市南沙区龙穴街港荣一街3号405-4室",
+                    buyerPhone: "020-39002350",
+                    buyerBank: "中国建设银行广州黄阁分理处",
+                    buyerBankAccount: "44050139210100000070",
+                    
+                    // 乙方信息
+                    supplierCompanyName: "广州舶源科技有限公司",
+                    supplierCreditCode: "91440101MA9XYTH73D",
+                    supplierAccountName: "广州舶源科技有限公司",
+                    supplierBank: "招商银行青岛分行市南支行",
+                    supplierBankAccount: "532914066410788",
+                    
+                    // 货物信息
+                    vehicleModel: "驱逐舰05",
+                    guidePrice: 300000,
+                    unitPriceWithTax: 280000,
+                    quantity: 1,
+                    totalPriceWithTax: 280000,
+                    totalPriceWithoutTax: 247787.61,
+                    vatAmount: 32212.39,
+                    
+                    // 合同金额
+                    contractTotalPrice: 280000,
+                    contractTotalPriceChinese: "贰拾捌万元整",
+                    
+                    // 货物数组
+                    goodsItems: [{
+                        vehicleModel: "驱逐舰05",
+                        guidePrice: 300000,
+                        unitPriceWithTax: 280000,
+                        quantity: 1,
+                        totalPriceWithTax: 280000,
+                        totalPriceWithoutTax: 247787.61,
+                        vatAmount: 32212.39
+                    }],
+                    goodsSummary: {
+                        totalQuantity: 1,
+                        totalAmount: 280000,
+                        totalVat: 32212.39
+                    }
+                }
+            };
+
+            try {
+                const response = await fetch('/api/contracts/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                const result = await response.json();
+                document.getElementById('result').innerHTML = `
+                    <h2>测试结果</h2>
+                    <p>状态: ${response.status}</p>
+                    <p>成功: ${result.success}</p>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+
+                if (result.success && result.data) {
+                    console.log('合同生成成功:', result.data);
+                    console.log('合同内容:', result.data.content);
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+                    <h2>错误</h2>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
