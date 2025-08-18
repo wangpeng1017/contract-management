@@ -571,8 +571,8 @@ function GeneratePageContent() {
     try {
       // 根据模块ID获取对应的变量
       const moduleVariables = template?.variables.filter(v => {
-        const module = VARIABLE_MODULES.find(m => m.id === moduleId);
-        return module?.variables.includes(v.name);
+        const variableModule = VARIABLE_MODULES.find(m => m.id === moduleId);
+        return variableModule?.variables.includes(v.name);
       }) || [];
 
       if (moduleVariables.length === 0) {
@@ -647,11 +647,9 @@ function GeneratePageContent() {
   // 数字转中文大写
   const convertNumberToChinese = (num: number): string => {
     const digits = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
-    const units = ['', '拾', '佰', '仟', '万', '拾', '佰', '仟', '亿'];
 
     if (num === 0) return '零元整';
 
-    const numStr = num.toString();
     let result = '';
 
     // 简化版本，处理常见金额

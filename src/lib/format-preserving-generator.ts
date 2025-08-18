@@ -1,6 +1,15 @@
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, HeadingLevel, AlignmentType } from 'docx';
 import MarkdownIt from 'markdown-it';
 
+type DocxElement = Paragraph | Table;
+
+// 简化的 Token 接口
+interface SimpleToken {
+  type: string;
+  tag: string;
+  content: string;
+}
+
 export interface GenerationOptions {
   preserveFormatting?: boolean;
   includeMetadata?: boolean;
@@ -47,8 +56,6 @@ export class FormatPreservingGenerator {
   ): Promise<GenerationResult> {
     try {
       const {
-        preserveFormatting = true,
-        includeMetadata = true,
         pageMargins = { top: 720, bottom: 720, left: 720, right: 720 },
         fontFamily = '宋体',
         fontSize = 24
@@ -56,9 +63,9 @@ export class FormatPreservingGenerator {
 
       // 解析markdown
       const tokens = this.markdownIt.parse(markdown, {});
-      
+
       // 转换为docx元素
-      const children = this.convertTokensToDocxElements(tokens, { fontFamily, fontSize });
+      const children = this.convertTokensToDocxElements(tokens as SimpleToken[], { fontFamily, fontSize });
 
       // 创建文档
       const doc = new Document({
@@ -146,8 +153,8 @@ export class FormatPreservingGenerator {
   /**
    * 将markdown tokens转换为docx元素
    */
-  private convertTokensToDocxElements(tokens: any[], options: { fontFamily: string; fontSize: number }): any[] {
-    const elements: any[] = [];
+  private convertTokensToDocxElements(tokens: SimpleToken[], options: { fontFamily: string; fontSize: number }): DocxElement[] {
+    const elements: DocxElement[] = [];
     let i = 0;
 
     while (i < tokens.length) {
@@ -241,7 +248,7 @@ export class FormatPreservingGenerator {
   /**
    * 解析表格
    */
-  private parseTable(tokens: any[], startIndex: number): { table: Table; nextIndex: number } {
+  private parseTable(tokens: SimpleToken[], startIndex: number): { table: Table; nextIndex: number } {
     const rows: TableRow[] = [];
     let i = startIndex + 1;
 

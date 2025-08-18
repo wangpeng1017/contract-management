@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { documentProcessor } from '@/lib/document-processor';
 import { formatPreservingGenerator } from '@/lib/format-preserving-generator';
 import fs from 'fs';
-import path from 'path';
 
 // POST /api/test/parse-template - 测试模板解析功能
 export async function POST(request: NextRequest) {

@@ -57,7 +57,7 @@ export class DocumentProcessor {
   /**
    * 从文件路径解析Word文档
    */
-  async parseDocumentFromPath(filePath: string): Promise<DocumentProcessingResult> {
+  async parseDocumentFromPath(_filePath: string): Promise<DocumentProcessingResult> {
     try {
       // 这里应该从实际文件系统或Blob存储读取文件
       // 由于演示目的，我们先返回模拟结果

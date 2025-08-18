@@ -85,7 +85,11 @@ export async function GET(
 
 // 传统Word文档生成方法
 async function generateTraditionalWordDoc(
-  contract: any,
+  contract: {
+    id: string;
+    content: string;
+    template?: { name?: string } | null;
+  },
   variablesData: Record<string, unknown>,
   goodsItems: Array<Record<string, unknown>>
 ): Promise<Buffer> {

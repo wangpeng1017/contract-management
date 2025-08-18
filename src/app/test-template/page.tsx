@@ -1,7 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { Upload, FileText, CheckCircle, XCircle, Download, AlertCircle } from 'lucide-react';
+import { Upload, FileText, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+
+interface DocumentMetadata {
+  title?: string;
+  wordCount?: number;
+  hasImages?: boolean;
+  hasTables?: boolean;
+}
+
+interface GenerationMetadata {
+  pageCount?: number;
+  wordCount?: number;
+}
 
 interface TestResult {
   success: boolean;
@@ -13,7 +25,7 @@ interface TestResult {
       success: boolean;
       contentLength?: number;
       markdownLength?: number;
-      metadata?: any;
+      metadata?: DocumentMetadata;
     };
     variableReplacement: {
       success: boolean;
@@ -23,7 +35,7 @@ interface TestResult {
     wordGeneration: {
       success: boolean;
       bufferSize?: number;
-      metadata?: any;
+      metadata?: GenerationMetadata;
     };
   };
   previews?: {

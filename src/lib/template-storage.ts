@@ -181,7 +181,7 @@ export class TemplateStorage {
   /**
    * 推断变量类型
    */
-  private inferVariableType(key: string, value: unknown): 'text' | 'currency' | 'date' | 'percentage' {
+  private inferVariableType(key: string, _value: unknown): 'text' | 'currency' | 'date' | 'percentage' {
     const keyLower = key.toLowerCase();
     
     if (keyLower.includes('amount') || keyLower.includes('price') || keyLower.includes('金额') || keyLower.includes('价格')) {
@@ -263,9 +263,9 @@ export class TemplateStorage {
   /**
    * 传统内容生成
    */
-  private generateTraditionalContent(template: any, variablesData: Record<string, unknown>): string {
+  private generateTraditionalContent(template: { name: string }, variablesData: Record<string, unknown>): string {
     // 这里可以复用原有的getBaseContractTemplate逻辑
-    let content = `
+    const content = `
     <h1>${template.name}</h1>
     <p>甲方：${variablesData.buyerName || '[甲方名称]'}</p>
     <p>乙方：${variablesData.supplierName || '[乙方名称]'}</p>
