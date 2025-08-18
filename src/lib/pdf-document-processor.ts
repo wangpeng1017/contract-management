@@ -233,14 +233,27 @@ class PDFDocumentProcessor {
    */
   private extractMetadata(pdfData: { info?: Record<string, unknown>; numpages: number; text: string }): PDFMetadata {
     const info = pdfData.info || {};
-    
+
+    // 安全的类型转换函数
+    const safeStringConvert = (value: unknown): string | undefined => {
+      return typeof value === 'string' ? value : undefined;
+    };
+
+    const safeDateConvert = (value: unknown): Date | undefined => {
+      if (typeof value === 'string' || value instanceof Date) {
+        const date = new Date(value);
+        return isNaN(date.getTime()) ? undefined : date;
+      }
+      return undefined;
+    };
+
     return {
-      title: info.Title,
-      author: info.Author,
-      creator: info.Creator,
-      producer: info.Producer,
-      creationDate: info.CreationDate ? new Date(info.CreationDate) : undefined,
-      modificationDate: info.ModDate ? new Date(info.ModDate) : undefined,
+      title: safeStringConvert(info.Title),
+      author: safeStringConvert(info.Author),
+      creator: safeStringConvert(info.Creator),
+      producer: safeStringConvert(info.Producer),
+      creationDate: safeDateConvert(info.CreationDate),
+      modificationDate: safeDateConvert(info.ModDate),
       pageCount: pdfData.numpages,
       hasImages: this.detectImages(pdfData.text),
       hasTables: this.detectTables(pdfData.text)
@@ -421,7 +434,7 @@ class PDFDocumentProcessor {
         const variableName = match[1];
         
         // 估算位置（实际实现需要更精确的定位）
-        const position = this.estimatePosition(placeholder, text, layoutInfo);
+        const position = this.estimatePosition(placeholder, text, _layoutInfo);
         
         variables.push({
           text: placeholder,
@@ -494,7 +507,7 @@ class PDFDocumentProcessor {
     return null;
   }
 
-  private estimatePosition(placeholder: string, text: string, layoutInfo: LayoutInfo): { x: number; y: number; pageNumber: number } {
+  private estimatePosition(placeholder: string, text: string, _layoutInfo: LayoutInfo): { x: number; y: number; pageNumber: number } {
     // 简化的位置估算
     const index = text.indexOf(placeholder);
     const beforeText = text.substring(0, index);
