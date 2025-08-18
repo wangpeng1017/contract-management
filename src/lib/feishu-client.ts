@@ -84,7 +84,7 @@ class FeishuDocumentClient {
         this.tokenExpireTime = Date.now() + (response.data.expire - 300) * 1000;
         
         console.log('访问令牌获取成功');
-        return this.accessToken;
+        return this.accessToken!;
       } else {
         throw new Error(`获取访问令牌失败: ${response.data.msg}`);
       }

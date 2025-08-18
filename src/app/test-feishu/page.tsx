@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Download, Trash2, Settings } from 'lucide-react';
+import { Upload, FileText, CheckCircle, XCircle, Download, Trash2, Settings } from 'lucide-react';
 
 interface VariableInfo {
   placeholder: string;

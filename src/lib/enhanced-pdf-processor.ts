@@ -49,8 +49,6 @@ class EnhancedPDFProcessor {
       
       // 使用pdf-parse提取文本，配置更详细的选项
       const pdfData = await pdf(dataBuffer, {
-        // 保持原始格式
-        normalizeWhitespace: false,
         // 不合并页面
         pagerender: undefined,
         // 最大页面数
@@ -114,7 +112,7 @@ class EnhancedPDFProcessor {
     console.log('开始结构化内容处理...');
     
     // 清理文本
-    let cleanText = rawText
+    const cleanText = rawText
       .replace(/\r\n/g, '\n')  // 统一换行符
       .replace(/\r/g, '\n')    // 统一换行符
       .replace(/\f/g, '\n')    // 替换换页符
@@ -229,10 +227,10 @@ class EnhancedPDFProcessor {
         line.includes('协议') ||
         line.includes('契约') ||
         line.includes('条款') ||
-        line.match(/^[一二三四五六七八九十]+[、．.]/) ||
-        line.match(/^第[一二三四五六七八九十]+[章条]/) ||
-        line.match(/^\d+[、．.]/) ||
-        line.match(/^[（(]\d+[）)]/)
+        !!line.match(/^[一二三四五六七八九十]+[、．.]/) ||
+        !!line.match(/^第[一二三四五六七八九十]+[章条]/) ||
+        !!line.match(/^\d+[、．.]/) ||
+        !!line.match(/^[（(]\d+[）)]/)
       )
     );
   }
@@ -242,10 +240,10 @@ class EnhancedPDFProcessor {
    */
   private isClause(line: string): boolean {
     return (
-      line.match(/^第[一二三四五六七八九十\d]+条/) ||
-      line.match(/^\d+\./) ||
-      line.match(/^[一二三四五六七八九十]+[、．]/) ||
-      line.match(/^[（(][一二三四五六七八九十\d]+[）)]/)
+      !!line.match(/^第[一二三四五六七八九十\d]+条/) ||
+      !!line.match(/^\d+\./) ||
+      !!line.match(/^[一二三四五六七八九十]+[、．]/) ||
+      !!line.match(/^[（(][一二三四五六七八九十\d]+[）)]/)
     );
   }
 

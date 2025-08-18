@@ -18,7 +18,7 @@ interface ContractGenerationRequest {
   templateId: string;
   variables: Record<string, string>;
   contractTitle: string;
-  contractData?: any;
+  contractData?: Record<string, unknown>;
 }
 
 // 合同生成结果接口
@@ -104,17 +104,16 @@ class FeishuTemplateStorage {
       }
 
       // 2. 保存模板信息到数据库
-      const template = await prisma.template.create({
+      const template = await prisma.contractTemplate.create({
         data: {
           name: templateName,
-          content: processResult.content!,
-          variables: JSON.stringify(processResult.variables),
-          metadata: JSON.stringify({
-            docToken: processResult.docToken,
-            documentInfo: processResult.documentInfo,
-            source: 'feishu',
-            originalFileName: fileName
-          })
+          description: `飞书模板: ${fileName}`,
+          fileName: fileName,
+          filePath: `feishu://${processResult.docToken}`,
+          fileSize: file.length,
+          mimeType: this.getMimeType(fileName),
+          status: 'active',
+          variablesExtracted: true
         }
       });
 
@@ -139,23 +138,35 @@ class FeishuTemplateStorage {
    */
   async getTemplate(templateId: string): Promise<FeishuTemplateInfo | null> {
     try {
-      const template = await prisma.template.findUnique({
-        where: { id: templateId }
+      const template = await prisma.contractTemplate.findUnique({
+        where: { id: templateId },
+        include: {
+          variables: true
+        }
       });
 
       if (!template) {
         return null;
       }
 
-      const metadata = JSON.parse(template.metadata || '{}');
-      const variables = JSON.parse(template.variables || '[]');
+      // 从文件路径提取docToken
+      const docToken = template.filePath.replace('feishu://', '');
+
+      // 转换变量格式
+      const variables = template.variables.map(v => ({
+        placeholder: v.name,
+        type: v.type as 'text' | 'currency' | 'date' | 'percentage',
+        description: v.description || '',
+        required: v.required,
+        defaultValue: v.defaultValue || undefined
+      }));
 
       return {
         id: template.id,
         name: template.name,
-        docToken: metadata.docToken,
+        docToken,
         variables,
-        content: template.content,
+        content: template.description || '',
         createdAt: template.createdAt,
         updatedAt: template.updatedAt
       };
@@ -207,20 +218,14 @@ class FeishuTemplateStorage {
       }
 
       // 4. 保存合同记录到数据库
-      const contract = await prisma.contract.create({
+      const contract = await prisma.generatedContract.create({
         data: {
-          title: request.contractTitle,
           templateId: request.templateId,
-          variables: JSON.stringify(request.variables),
-          content: '', // 飞书生成的内容
-          status: 'generated',
-          metadata: JSON.stringify({
-            contractDocToken: generationResult.contractDocToken,
-            downloadUrl: generationResult.downloadUrl,
-            source: 'feishu',
-            generatedAt: new Date().toISOString()
-          }),
-          ...(request.contractData || {})
+          templateName: template.name,
+          content: request.contractTitle,
+          variablesData: request.variables,
+          status: 'completed',
+          filePath: generationResult.downloadUrl || ''
         }
       });
 
@@ -249,7 +254,7 @@ class FeishuTemplateStorage {
     try {
       await this.initialize();
       
-      const contract = await prisma.contract.findUnique({
+      const contract = await prisma.generatedContract.findUnique({
         where: { id: contractId }
       });
 
@@ -260,18 +265,16 @@ class FeishuTemplateStorage {
         };
       }
 
-      const metadata = JSON.parse(contract.metadata || '{}');
-      
-      if (!metadata.contractDocToken) {
+      if (!contract.filePath) {
         return {
           success: false,
-          error: '合同文档令牌不存在'
+          error: '合同文档路径不存在'
         };
       }
 
       // 重新导出文档
       const client = getFeishuClient();
-      const exportResult = await client.exportDocument(metadata.contractDocToken, 'docx');
+      const exportResult = await client.exportDocument(contract.filePath, 'docx');
       
       if (!exportResult.success) {
         return {
@@ -302,11 +305,14 @@ class FeishuTemplateStorage {
    */
   async listTemplates(): Promise<FeishuTemplateInfo[]> {
     try {
-      const templates = await prisma.template.findMany({
+      const templates = await prisma.contractTemplate.findMany({
         where: {
-          metadata: {
-            contains: '"source":"feishu"'
+          filePath: {
+            startsWith: 'feishu://'
           }
+        },
+        include: {
+          variables: true
         },
         orderBy: {
           createdAt: 'desc'
@@ -314,15 +320,21 @@ class FeishuTemplateStorage {
       });
 
       return templates.map(template => {
-        const metadata = JSON.parse(template.metadata || '{}');
-        const variables = JSON.parse(template.variables || '[]');
+        const docToken = template.filePath.replace('feishu://', '');
+        const variables = template.variables.map(v => ({
+          placeholder: v.name,
+          type: v.type as 'text' | 'currency' | 'date' | 'percentage',
+          description: v.description || '',
+          required: v.required,
+          defaultValue: v.defaultValue || undefined
+        }));
 
         return {
           id: template.id,
           name: template.name,
-          docToken: metadata.docToken,
+          docToken,
           variables,
-          content: template.content,
+          content: template.description || '',
           createdAt: template.createdAt,
           updatedAt: template.updatedAt
         };
@@ -356,7 +368,7 @@ class FeishuTemplateStorage {
    */
   async deleteTemplate(templateId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      await prisma.template.delete({
+      await prisma.contractTemplate.delete({
         where: { id: templateId }
       });
 
@@ -371,21 +383,34 @@ class FeishuTemplateStorage {
   }
 
   /**
+   * 获取MIME类型
+   */
+  private getMimeType(fileName: string): string {
+    const extension = fileName.toLowerCase().split('.').pop();
+    const mimeTypes: Record<string, string> = {
+      'pdf': 'application/pdf',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    };
+    return mimeTypes[extension || ''] || 'application/octet-stream';
+  }
+
+  /**
    * 更新模板
    */
   async updateTemplate(templateId: string, updates: { name?: string; variables?: VariableInfo[] }): Promise<{ success: boolean; error?: string }> {
     try {
-      const updateData: any = {};
-      
+      const updateData: Record<string, unknown> = {};
+
       if (updates.name) {
         updateData.name = updates.name;
       }
-      
+
       if (updates.variables) {
-        updateData.variables = JSON.stringify(updates.variables);
+        updateData.description = `更新的模板变量: ${updates.variables.length}个`;
       }
 
-      await prisma.template.update({
+      await prisma.contractTemplate.update({
         where: { id: templateId },
         data: updateData
       });

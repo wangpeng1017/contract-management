@@ -26,9 +26,24 @@ interface MockExportResult {
  * 模拟飞书文档API客户端
  * 提供与真实API相同的接口，但使用模拟数据
  */
+interface MockDocument {
+  docToken: string;
+  title: string;
+  url: string;
+  createTime: string;
+  updateTime: string;
+  content: string;
+}
+
+interface MockTicket {
+  status: string;
+  result?: MockDocument;
+  downloadUrl?: string;
+}
+
 class MockFeishuDocumentClient {
-  private mockDocuments: Map<string, any> = new Map();
-  private mockTickets: Map<string, any> = new Map();
+  private mockDocuments: Map<string, MockDocument> = new Map();
+  private mockTickets: Map<string, MockTicket> = new Map();
 
   constructor() {
     console.log('模拟飞书文档客户端初始化完成');
@@ -39,7 +54,7 @@ class MockFeishuDocumentClient {
    */
   async importDocument(file: Buffer, fileName: string, fileType: string): Promise<MockImportResult> {
     try {
-      console.log('模拟导入文档到飞书:', fileName);
+      console.log('模拟导入文档到飞书:', fileName, '类型:', fileType);
 
       // 模拟处理延迟
       await new Promise(resolve => setTimeout(resolve, 1000));

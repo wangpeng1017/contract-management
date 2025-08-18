@@ -99,6 +99,7 @@ export async function GET() {
       }
     });
   } catch (error) {
+    console.error('获取生成状态失败:', error);
     return NextResponse.json({
       success: false,
       error: '服务不可用'

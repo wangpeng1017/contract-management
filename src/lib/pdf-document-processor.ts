@@ -170,8 +170,6 @@ class PDFDocumentProcessor {
 
       // 第一步：提取基本文本内容，使用更好的配置
       const pdfData = await pdf(buffer, {
-        // 保持原始格式
-        normalizeWhitespace: false,
         // 不合并页面
         pagerender: undefined,
         // 最大页面数
@@ -248,7 +246,7 @@ class PDFDocumentProcessor {
     console.log('开始清理和结构化文本内容...');
 
     // 清理文本
-    let cleanText = rawText
+    const cleanText = rawText
       .replace(/\r\n/g, '\n')  // 统一换行符
       .replace(/\r/g, '\n')    // 统一换行符
       .replace(/\f/g, '\n')    // 替换换页符
@@ -306,10 +304,40 @@ class PDFDocumentProcessor {
    */
   private isSubClause(line: string): boolean {
     return (
-      line.match(/^\d+\.\d+/) ||  // 2.1, 2.2 等
-      line.match(/^[（(]\d+[）)]/) ||  // (1), (2) 等
-      line.match(/^[一二三四五六七八九十]+[、．]/) ||  // 一、二、等
-      line.match(/^\d+[）)]/)  // 1) 2) 等
+      !!line.match(/^\d+\.\d+/) ||  // 2.1, 2.2 等
+      !!line.match(/^[（(]\d+[）)]/) ||  // (1), (2) 等
+      !!line.match(/^[一二三四五六七八九十]+[、．]/) ||  // 一、二、等
+      !!line.match(/^\d+[）)]/)  // 1) 2) 等
+    );
+  }
+
+  /**
+   * 判断是否为标题行
+   */
+  private isTitle(line: string): boolean {
+    return (
+      line.length < 50 && (
+        line.includes('合同') ||
+        line.includes('协议') ||
+        line.includes('契约') ||
+        line.includes('条款') ||
+        !!line.match(/^[一二三四五六七八九十]+[、．.]/) ||
+        !!line.match(/^第[一二三四五六七八九十]+[章条]/) ||
+        !!line.match(/^\d+[、．.]/) ||
+        !!line.match(/^[（(]\d+[）)]/)
+      )
+    );
+  }
+
+  /**
+   * 判断是否为条款行
+   */
+  private isClause(line: string): boolean {
+    return (
+      !!line.match(/^第[一二三四五六七八九十\d]+条/) ||
+      !!line.match(/^\d+\./) ||
+      !!line.match(/^[一二三四五六七八九十]+[、．]/) ||
+      !!line.match(/^[（(][一二三四五六七八九十\d]+[）)]/)
     );
   }
 
@@ -380,9 +408,10 @@ class PDFDocumentProcessor {
   /**
    * 分析文档布局
    */
-  private async analyzeLayout(pdfData: { text: string }, _pageImages: string[]): Promise<LayoutInfo> {
+  private async analyzeLayout(pdfData: { text: string }, pageImages: string[]): Promise<LayoutInfo> {
     // 这里实现布局分析逻辑
     // 基于文本内容和页面图像分析段落、表格、标题等结构
+    console.log(`分析布局，页面图像数量: ${pageImages.length}`);
     
     const paragraphs: ParagraphInfo[] = [];
     const tables: TableInfo[] = [];
@@ -476,9 +505,12 @@ class PDFDocumentProcessor {
   /**
    * 提取文本项
    */
-  private extractTextItems(text: string, _pageNumber: number): TextItem[] {
+  private extractTextItems(text: string, pageNumber: number): TextItem[] {
     const items: TextItem[] = [];
     const lines = text.split('\n');
+
+    // 使用页面编号进行处理
+    console.log(`提取第${pageNumber}页的文本项，共${lines.length}行`);
     
     let currentY = 50;
     for (const line of lines) {
@@ -502,7 +534,7 @@ class PDFDocumentProcessor {
   /**
    * 识别变量占位符
    */
-  private identifyVariables(text: string, _layoutInfo: LayoutInfo): VariablePlaceholder[] {
+  private identifyVariables(text: string, layoutInfo: LayoutInfo): VariablePlaceholder[] {
     const variables: VariablePlaceholder[] = [];
     
     // 支持的占位符格式
@@ -519,7 +551,7 @@ class PDFDocumentProcessor {
         const variableName = match[1];
         
         // 估算位置（实际实现需要更精确的定位）
-        const position = this.estimatePosition(placeholder, text, _layoutInfo);
+        const position = this.estimatePosition(placeholder, text, layoutInfo);
         
         variables.push({
           text: placeholder,
@@ -592,11 +624,14 @@ class PDFDocumentProcessor {
     return null;
   }
 
-  private estimatePosition(placeholder: string, text: string, _layoutInfo: LayoutInfo): { x: number; y: number; pageNumber: number } {
+  private estimatePosition(placeholder: string, text: string, layoutInfo: LayoutInfo): { x: number; y: number; pageNumber: number } {
     // 简化的位置估算
     const index = text.indexOf(placeholder);
     const beforeText = text.substring(0, index);
     const lines = beforeText.split('\n').length;
+
+    // 使用布局信息进行更精确的定位
+    console.log(`估算变量位置，布局信息包含${layoutInfo.paragraphs.length}个段落`);
     
     return {
       x: 50,
@@ -607,7 +642,7 @@ class PDFDocumentProcessor {
 
   private inferVariableType(variableName: string): 'text' | 'currency' | 'date' | 'percentage' {
     const name = variableName.toLowerCase();
-    
+
     if (name.includes('金额') || name.includes('价格') || name.includes('费用') || name.includes('amount') || name.includes('price')) {
       return 'currency';
     }
@@ -617,9 +652,10 @@ class PDFDocumentProcessor {
     if (name.includes('比例') || name.includes('率') || name.includes('percent') || name.includes('%')) {
       return 'percentage';
     }
-    
+
     return 'text';
   }
+
 }
 
 // 导出单例

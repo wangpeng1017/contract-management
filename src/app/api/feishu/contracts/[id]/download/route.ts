@@ -7,10 +7,11 @@ import { feishuTemplateStorage } from '@/lib/feishu-template-storage';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const contractId = params.id;
+    const resolvedParams = await params;
+    const contractId = resolvedParams.id;
     
     console.log('下载飞书合同文档:', contractId);
 
@@ -37,7 +38,7 @@ export async function GET(
     headers.set('Content-Disposition', `attachment; filename="contract-${contractId}.docx"`);
     headers.set('Content-Length', result.buffer.length.toString());
 
-    return new NextResponse(result.buffer, {
+    return new NextResponse(result.buffer as BodyInit, {
       status: 200,
       headers
     });

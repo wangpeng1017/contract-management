@@ -393,8 +393,16 @@ export class TemplateStorage {
   /**
    * 推断变量类型
    */
-  private inferVariableType(key: string, _value: unknown): 'text' | 'currency' | 'date' | 'percentage' {
+  private inferVariableType(key: string, value: unknown): 'text' | 'currency' | 'date' | 'percentage' {
     const keyLower = key.toLowerCase();
+
+    // 基于值的类型推断
+    if (typeof value === 'string' && /^\d+(\.\d+)?$/.test(value)) {
+      // 如果值是数字字符串，可能是货币或百分比
+      if (keyLower.includes('rate') || keyLower.includes('percent') || keyLower.includes('比例')) {
+        return 'percentage';
+      }
+    }
     
     if (keyLower.includes('amount') || keyLower.includes('price') || keyLower.includes('金额') || keyLower.includes('价格')) {
       return 'currency';

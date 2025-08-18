@@ -272,7 +272,7 @@ class PDFFormatPreservingGenerator {
       let elementType: 'paragraph' | 'table' | 'header' | 'footer' | 'image' = 'paragraph';
       let fontSize = 12;
       let bold = false;
-      let alignment = AlignmentType.LEFT;
+      let alignment: typeof AlignmentType[keyof typeof AlignmentType] = AlignmentType.LEFT;
 
       if (isMainTitle) {
         elementType = 'header';
@@ -515,6 +515,30 @@ class PDFFormatPreservingGenerator {
       line.includes('第') && line.includes('条') ||
       line.includes('第') && line.includes('章') ||
       /^\d+\./.test(line)
+    );
+  }
+
+  private isMainTitle(line: string): boolean {
+    return line.length < 30 && (
+      line.includes('合同') ||
+      line.includes('协议') ||
+      line.includes('契约')
+    );
+  }
+
+  private isSubHeaderLine(line: string): boolean {
+    return line.length < 40 && (
+      /^第[一二三四五六七八九十\d]+条/.test(line) ||
+      /^\d+\.\d+/.test(line) ||
+      /^[（(]\d+[）)]/.test(line)
+    );
+  }
+
+  private isClauseLine(line: string): boolean {
+    return (
+      /^第[一二三四五六七八九十\d]+条/.test(line) ||
+      /^\d+\./.test(line) ||
+      /^[一二三四五六七八九十]+[、．]/.test(line)
     );
   }
 

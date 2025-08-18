@@ -1,6 +1,5 @@
 import { getFeishuClient, DocumentInfo } from './feishu-client';
 import { mockFeishuClient } from './mock-feishu-client';
-import axios from 'axios';
 
 // 变量信息接口
 interface VariableInfo {
@@ -275,7 +274,7 @@ class FeishuDocumentProcessor {
 
       // 如果是模拟模式，调用模拟的变量替换
       if (this.useMockMode && 'replaceVariables' in client) {
-        return await (client as any).replaceVariables(docToken, variables);
+        return await (client as { replaceVariables: (docToken: string, variables: Record<string, string>) => Promise<{ success: boolean; error?: string }> }).replaceVariables(docToken, variables);
       }
 
       // 实际的飞书API变量替换实现
@@ -303,7 +302,7 @@ class FeishuDocumentProcessor {
 
       // 如果是模拟模式，调用模拟的下载
       if (this.useMockMode && 'downloadDocument' in client) {
-        return await (client as any).downloadDocument(fileToken);
+        return await (client as { downloadDocument: (fileToken: string) => Promise<{ success: boolean; buffer?: Buffer; error?: string }> }).downloadDocument(fileToken);
       }
 
       // 实际的飞书API文件下载实现

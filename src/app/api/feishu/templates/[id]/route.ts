@@ -7,10 +7,11 @@ import { feishuTemplateStorage } from '@/lib/feishu-template-storage';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const templateId = params.id;
+    const resolvedParams = await params;
+    const templateId = resolvedParams.id;
     
     console.log('获取飞书模板详情:', templateId);
 
@@ -51,10 +52,11 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const templateId = params.id;
+    const resolvedParams = await params;
+    const templateId = resolvedParams.id;
     const body = await request.json();
     
     console.log('更新飞书模板:', templateId, body);
@@ -92,10 +94,11 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const templateId = params.id;
+    const resolvedParams = await params;
+    const templateId = resolvedParams.id;
     
     console.log('删除飞书模板:', templateId);
 
