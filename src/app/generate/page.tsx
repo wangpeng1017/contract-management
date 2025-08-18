@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ChevronDown, ChevronUp, FileText, Building, Building2, Package, DollarSign, CheckCircle, Plus, Trash2, Layout, Maximize2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, Building, Building2, Package, DollarSign, CheckCircle, Plus, Trash2, Layout, Maximize2, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import ContractPreview from '@/components/ContractPreview';
 import ContractEditor from '@/components/ContractEditor';
@@ -566,6 +566,116 @@ function GeneratePageContent() {
     setIsEditing(false);
   };
 
+  // 智能填写功能
+  const handleSmartFill = async (moduleId: string) => {
+    try {
+      // 根据模块ID获取对应的变量
+      const moduleVariables = template?.variables.filter(v => {
+        const module = VARIABLE_MODULES.find(m => m.id === moduleId);
+        return module?.variables.includes(v.name);
+      }) || [];
+
+      if (moduleVariables.length === 0) {
+        alert('该模块没有可填写的字段');
+        return;
+      }
+
+      // 根据模块类型提供智能填写数据
+      const smartFillData: Record<string, string> = {};
+
+      switch (moduleId) {
+        case 'buyer':
+          smartFillData.buyerName = '广州南沙开发区管理委员会';
+          smartFillData.buyerAddress = '广州市南沙区凤凰大道1号';
+          smartFillData.buyerLegalRepresentative = '张三';
+          smartFillData.buyerPhone = '020-39002350';
+          smartFillData.buyerBankName = '中国建设银行广州黄阁分理处';
+          smartFillData.buyerBankAccount = '44050139210100000070';
+          break;
+        case 'supplier':
+          smartFillData.supplierName = '比亚迪汽车销售有限公司';
+          smartFillData.supplierAddress = '深圳市坪山区比亚迪路3009号';
+          smartFillData.supplierLegalRepresentative = '李四';
+          smartFillData.supplierPhone = '0755-89888888';
+          smartFillData.supplierBankName = '中国银行深圳坪山支行';
+          smartFillData.supplierBankAccount = '75950100182600000123';
+          break;
+        case 'basic':
+          smartFillData.contractNumber = `HT-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+          smartFillData.signingDate = new Date().toISOString().split('T')[0];
+          smartFillData.signingLocation = '广州市南沙区';
+          break;
+        case 'amount':
+          const summary = getGoodsSummary();
+          if (summary.totalPriceWithTax > 0) {
+            smartFillData.totalAmount = summary.totalPriceWithTax.toString();
+            smartFillData.totalAmountWords = convertNumberToChinese(summary.totalPriceWithTax);
+          } else {
+            smartFillData.totalAmount = '280000';
+            smartFillData.totalAmountWords = '贰拾捌万元整';
+          }
+          break;
+        default:
+          alert('该模块暂不支持智能填写');
+          return;
+      }
+
+      // 更新表单数据
+      const updatedFormData = { ...formData };
+      let filledCount = 0;
+
+      moduleVariables.forEach(variable => {
+        if (smartFillData[variable.name] && !formData[variable.name]) {
+          updatedFormData[variable.name] = smartFillData[variable.name];
+          filledCount++;
+        }
+      });
+
+      if (filledCount > 0) {
+        setFormData(updatedFormData);
+        alert(`智能填写完成！已填写 ${filledCount} 个字段`);
+      } else {
+        alert('该模块的字段已经填写完成');
+      }
+
+    } catch (error) {
+      console.error('智能填写失败:', error);
+      alert('智能填写失败，请稍后重试');
+    }
+  };
+
+  // 数字转中文大写
+  const convertNumberToChinese = (num: number): string => {
+    const digits = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
+    const units = ['', '拾', '佰', '仟', '万', '拾', '佰', '仟', '亿'];
+
+    if (num === 0) return '零元整';
+
+    const numStr = num.toString();
+    let result = '';
+
+    // 简化版本，处理常见金额
+    if (num >= 10000) {
+      const wan = Math.floor(num / 10000);
+      result += digits[wan] + '拾万';
+      const remainder = num % 10000;
+      if (remainder > 0) {
+        result += digits[remainder] + '仟';
+      }
+    } else if (num >= 1000) {
+      const qian = Math.floor(num / 1000);
+      result += digits[qian] + '仟';
+      const remainder = num % 1000;
+      if (remainder > 0) {
+        result += digits[Math.floor(remainder / 100)] + '佰';
+      }
+    } else {
+      result = digits[num];
+    }
+
+    return result + '元整';
+  };
+
   // 渲染输入字段
   const renderInputField = (variable: ContractVariable) => {
     const value = String(formData[variable.name] || '');
@@ -856,6 +966,18 @@ function GeneratePageContent() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSmartFill(module.id);
+                    }}
+                    className="h-6 px-2 text-xs"
+                  >
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    智能填写
+                  </Button>
                   <Badge variant={completionStatus.percentage === 100 ? "default" : "secondary"}>
                     {completionStatus.completed}/{completionStatus.total}
                   </Badge>

@@ -85,9 +85,119 @@ export default function CompactContractForm({
   };
 
   // 智能填写功能
-  const handleSmartFill = (sectionId: string) => {
-    // TODO: 实现智能填写逻辑
-    console.log('智能填写:', sectionId);
+  const handleSmartFill = async (sectionId: string) => {
+    try {
+      // 根据模块ID获取对应的变量
+      const moduleVariables = template?.variables.filter(v => {
+        const moduleMap: Record<string, string[]> = {
+          buyer: ['buyerName', 'buyerAddress', 'buyerLegalRepresentative', 'buyerPhone', 'buyerBankName', 'buyerBankAccount'],
+          supplier: ['supplierName', 'supplierAddress', 'supplierLegalRepresentative', 'supplierPhone', 'supplierBankName', 'supplierBankAccount'],
+          basic: ['contractNumber', 'signingDate', 'signingLocation'],
+          amount: ['totalAmount', 'totalAmountWords']
+        };
+        return moduleMap[sectionId]?.includes(v.name);
+      }) || [];
+
+      if (moduleVariables.length === 0) {
+        alert('该模块没有可填写的字段');
+        return;
+      }
+
+      // 根据模块类型提供智能填写数据
+      const smartFillData: Record<string, string> = {};
+
+      switch (sectionId) {
+        case 'buyer':
+          smartFillData.buyerName = '广州南沙开发区管理委员会';
+          smartFillData.buyerAddress = '广州市南沙区凤凰大道1号';
+          smartFillData.buyerLegalRepresentative = '张三';
+          smartFillData.buyerPhone = '020-39002350';
+          smartFillData.buyerBankName = '中国建设银行广州黄阁分理处';
+          smartFillData.buyerBankAccount = '44050139210100000070';
+          break;
+        case 'supplier':
+          smartFillData.supplierName = '比亚迪汽车销售有限公司';
+          smartFillData.supplierAddress = '深圳市坪山区比亚迪路3009号';
+          smartFillData.supplierLegalRepresentative = '李四';
+          smartFillData.supplierPhone = '0755-89888888';
+          smartFillData.supplierBankName = '中国银行深圳坪山支行';
+          smartFillData.supplierBankAccount = '75950100182600000123';
+          break;
+        case 'basic':
+          smartFillData.contractNumber = `HT-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+          smartFillData.signingDate = new Date().toISOString().split('T')[0];
+          smartFillData.signingLocation = '广州市南沙区';
+          break;
+        case 'amount':
+          // 从货物数据计算总金额
+          const totalAmount = goodsItems.reduce((sum, item) => sum + item.totalPriceWithTax, 0);
+          if (totalAmount > 0) {
+            smartFillData.totalAmount = totalAmount.toString();
+            smartFillData.totalAmountWords = convertNumberToChinese(totalAmount);
+          } else {
+            smartFillData.totalAmount = '280000';
+            smartFillData.totalAmountWords = '贰拾捌万元整';
+          }
+          break;
+        default:
+          alert('该模块暂不支持智能填写');
+          return;
+      }
+
+      // 更新表单数据
+      const updatedFormData = { ...formData };
+      let filledCount = 0;
+
+      moduleVariables.forEach(variable => {
+        if (smartFillData[variable.name] && !formData[variable.name]) {
+          updatedFormData[variable.name] = smartFillData[variable.name];
+          filledCount++;
+        }
+      });
+
+      if (filledCount > 0) {
+        setFormData(updatedFormData);
+        alert(`智能填写完成！已填写 ${filledCount} 个字段`);
+      } else {
+        alert('该模块的字段已经填写完成');
+      }
+
+    } catch (error) {
+      console.error('智能填写失败:', error);
+      alert('智能填写失败，请稍后重试');
+    }
+  };
+
+  // 数字转中文大写
+  const convertNumberToChinese = (num: number): string => {
+    const digits = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
+
+    if (num === 0) return '零元整';
+
+    // 简化版本，处理常见金额
+    if (num >= 10000) {
+      const wan = Math.floor(num / 10000);
+      const remainder = num % 10000;
+      let result = digits[wan];
+      if (wan > 1) result = digits[wan] + '拾';
+      result += '万';
+      if (remainder > 0) {
+        if (remainder >= 1000) {
+          result += digits[Math.floor(remainder / 1000)] + '仟';
+        }
+      }
+      return result + '元整';
+    } else if (num >= 1000) {
+      const qian = Math.floor(num / 1000);
+      let result = digits[qian] + '仟';
+      const remainder = num % 1000;
+      if (remainder >= 100) {
+        result += digits[Math.floor(remainder / 100)] + '佰';
+      }
+      return result + '元整';
+    } else {
+      return digits[num] + '元整';
+    }
   };
 
   // 处理金额变化
