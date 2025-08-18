@@ -9,10 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ChevronDown, ChevronUp, FileText, Building, Building2, Package, DollarSign, CheckCircle, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, Building, Building2, Package, DollarSign, CheckCircle, Plus, Trash2, Layout, Maximize2 } from 'lucide-react';
 import Link from 'next/link';
 import ContractPreview from '@/components/ContractPreview';
 import ContractEditor from '@/components/ContractEditor';
+import CompactContractForm from '@/components/CompactContractForm';
 
 interface ContractTemplate {
   id: string;
@@ -120,6 +121,7 @@ function GeneratePageContent() {
   const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [isCompactLayout, setIsCompactLayout] = useState(false);
   const [generatedContract, setGeneratedContract] = useState<{
     contractId: string;
     content: string;
@@ -531,11 +533,19 @@ function GeneratePageContent() {
       });
 
       if (response.ok) {
-        setGeneratedContract(updatedContract);
-        setIsEditing(false);
-        alert('合同保存成功');
+        const result = await response.json();
+        if (result.success) {
+          setGeneratedContract(updatedContract);
+          setIsEditing(false);
+          alert('合同保存成功');
+        } else {
+          console.error('保存失败:', result.error);
+          alert(`合同保存失败: ${result.error}`);
+        }
       } else {
-        alert('合同保存失败');
+        const errorText = await response.text();
+        console.error('HTTP错误:', response.status, errorText);
+        alert(`合同保存失败: HTTP ${response.status}`);
       }
     } catch (error) {
       console.error('合同保存失败:', error);
@@ -967,9 +977,31 @@ function GeneratePageContent() {
                     {template.description || '请填写以下信息来生成合同'}
                   </CardDescription>
                 </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-blue-600">{progress}%</div>
-                  <div className="text-sm text-gray-600">完成度</div>
+                <div className="flex items-center gap-4">
+                  <div className="flex gap-2">
+                    <Button
+                      variant={!isCompactLayout ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setIsCompactLayout(false)}
+                      className="flex items-center gap-2"
+                    >
+                      <Layout className="h-4 w-4" />
+                      标准布局
+                    </Button>
+                    <Button
+                      variant={isCompactLayout ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setIsCompactLayout(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <Maximize2 className="h-4 w-4" />
+                      紧凑布局
+                    </Button>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-blue-600">{progress}%</div>
+                    <div className="text-sm text-gray-600">完成度</div>
+                  </div>
                 </div>
               </div>
               <Progress value={progress} className="mt-4" />
@@ -977,8 +1009,22 @@ function GeneratePageContent() {
           </Card>
         </div>
 
-        {/* 模块化表单 - 优化4行布局 */}
-        <div className="space-y-10 mb-8">
+        {/* 条件渲染：紧凑布局 vs 标准布局 */}
+        {isCompactLayout ? (
+          <CompactContractForm
+            template={template}
+            formData={formData}
+            setFormData={setFormData}
+            goodsItems={goodsItems}
+            setGoodsItems={setGoodsItems}
+            errors={errors}
+            onGenerate={handleGenerate}
+            generating={generating}
+          />
+        ) : (
+          <div>
+            {/* 标准布局 - 模块化表单 - 优化4行布局 */}
+            <div className="space-y-10 mb-8">
           {/* 第一行：基础合同信息（全宽） */}
           <div className="w-full">
             <div className="relative">
@@ -1063,8 +1109,8 @@ function GeneratePageContent() {
           </div>
         </div>
 
-        {/* 操作按钮 */}
-        <Card className="bg-gray-50">
+            {/* 操作按钮 */}
+            <Card className="bg-gray-50">
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row gap-4">
               <Button
@@ -1088,6 +1134,8 @@ function GeneratePageContent() {
             )}
           </CardContent>
         </Card>
+          </div>
+        )}
       </div>
     </div>
   );
