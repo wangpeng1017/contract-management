@@ -30,7 +30,7 @@ export async function GET(
     const variablesData = contract.variablesData as Record<string, unknown>;
     const goodsItems = (variablesData?.goodsItems as Array<Record<string, unknown>>) || [];
 
-    console.log('开始生成Word文档，尝试使用格式保真系统');
+    console.log('开始生成Word文档，尝试使用格式保真系统（支持PDF和Word模板）');
 
     // 尝试使用格式保真系统重新生成
     const processResult = await templateStorage.processTemplateForContract(
@@ -40,24 +40,33 @@ export async function GET(
 
     let buffer: Buffer;
 
-    if (processResult.success && processResult.markdown) {
-      console.log('使用格式保真系统生成Word文档');
-      // 使用格式保真生成器
-      const genResult = await formatPreservingGenerator.generateWordFromMarkdown(
-        processResult.markdown,
-        {
-          preserveFormatting: true,
-          fontFamily: '宋体',
-          fontSize: 24,
-          pageMargins: { top: 720, bottom: 720, left: 720, right: 720 }
-        }
-      );
+    if (processResult.success) {
+      // 检查是否是PDF模板生成的Buffer
+      if (processResult.buffer) {
+        console.log('使用PDF模板格式保真系统生成Word文档');
+        buffer = processResult.buffer;
+      } else if (processResult.markdown) {
+        console.log('使用Word模板格式保真系统生成Word文档');
+        // 使用格式保真生成器
+        const genResult = await formatPreservingGenerator.generateWordFromMarkdown(
+          processResult.markdown,
+          {
+            preserveFormatting: true,
+            fontFamily: '宋体',
+            fontSize: 24,
+            pageMargins: { top: 720, bottom: 720, left: 720, right: 720 }
+          }
+        );
 
-      if (genResult.success && genResult.buffer) {
-        buffer = genResult.buffer;
+        if (genResult.success && genResult.buffer) {
+          buffer = genResult.buffer;
+        } else {
+          console.log('Word模板格式保真生成失败，使用传统方法:', genResult.error);
+          // 回退到传统方法
+          buffer = await generateTraditionalWordDoc(contract, variablesData, goodsItems);
+        }
       } else {
-        console.log('格式保真生成失败，使用传统方法:', genResult.error);
-        // 回退到传统方法
+        console.log('格式保真系统内容不完整，使用传统方法');
         buffer = await generateTraditionalWordDoc(contract, variablesData, goodsItems);
       }
     } else {

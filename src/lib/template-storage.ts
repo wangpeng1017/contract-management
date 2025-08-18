@@ -1,15 +1,20 @@
 import { prisma } from './database';
 import { documentProcessor, VariableReplacement } from './document-processor';
+import { pdfDocumentProcessor, PDFProcessingResult } from './pdf-document-processor';
+import { pdfFormatPreservingGenerator, VariableReplacement as PDFVariableReplacement } from './pdf-format-preserving-generator';
 
 export interface TemplateContent {
   id: string;
   originalHtml?: string;
   markdown?: string;
+  pdfData?: PDFProcessingResult; // 新增PDF数据支持
+  fileType?: 'word' | 'pdf'; // 文件类型标识
   metadata?: {
     title?: string;
     wordCount?: number;
     hasImages?: boolean;
     hasTables?: boolean;
+    pageCount?: number; // PDF页数
   };
 }
 
@@ -17,6 +22,7 @@ export interface ProcessedTemplate {
   success: boolean;
   content?: string;
   markdown?: string;
+  buffer?: Buffer; // 新增：支持PDF生成的Word文档Buffer
   error?: string;
 }
 
@@ -30,6 +36,8 @@ export class TemplateStorage {
    */
   async storeTemplateContent(templateId: string, content: TemplateContent): Promise<boolean> {
     try {
+      console.log('存储模板内容:', templateId, '类型:', content.fileType);
+
       // 将解析后的内容存储到数据库
       await prisma.contractTemplate.update({
         where: { id: templateId },
@@ -48,6 +56,58 @@ export class TemplateStorage {
     } catch (error) {
       console.error('存储模板内容失败:', error);
       return false;
+    }
+  }
+
+  /**
+   * 解析并存储PDF模板
+   */
+  async parseAndStorePDFTemplate(templateId: string, file: File): Promise<{ success: boolean; error?: string }> {
+    try {
+      console.log('开始解析PDF模板:', templateId);
+
+      // 解析PDF文档
+      const parseResult = await pdfDocumentProcessor.parseDocumentFromFile(file);
+
+      if (!parseResult.success) {
+        return {
+          success: false,
+          error: parseResult.error || 'PDF解析失败'
+        };
+      }
+
+      // 存储解析结果
+      const templateContent: TemplateContent = {
+        id: templateId,
+        pdfData: parseResult,
+        fileType: 'pdf',
+        metadata: {
+          title: parseResult.metadata?.title,
+          wordCount: parseResult.content?.split(/\s+/).length || 0,
+          hasImages: parseResult.metadata?.hasImages || false,
+          hasTables: parseResult.metadata?.hasTables || false,
+          pageCount: parseResult.metadata?.pageCount || 1
+        }
+      };
+
+      const stored = await this.storeTemplateContent(templateId, templateContent);
+
+      if (!stored) {
+        return {
+          success: false,
+          error: '模板存储失败'
+        };
+      }
+
+      console.log('PDF模板解析和存储成功');
+      return { success: true };
+
+    } catch (error) {
+      console.error('PDF模板处理失败:', error);
+      return {
+        success: false,
+        error: `PDF处理失败: ${error instanceof Error ? error.message : '未知错误'}`
+      };
     }
   }
 
@@ -94,10 +154,40 @@ export class TemplateStorage {
     try {
       // 获取存储的模板内容
       const templateContent = await this.getTemplateContent(templateId);
-      
-      if (!templateContent || !templateContent.markdown) {
+
+      if (!templateContent) {
         // 如果没有解析过的内容，使用传统方法
         return this.fallbackToTraditionalGeneration(templateId, variablesData);
+      }
+
+      // 根据文件类型选择处理方式
+      if (templateContent.fileType === 'pdf' && templateContent.pdfData) {
+        return await this.processPDFTemplate(templateContent, variablesData);
+      } else if (templateContent.markdown) {
+        return await this.processWordTemplate(templateContent, variablesData);
+      } else {
+        return this.fallbackToTraditionalGeneration(templateId, variablesData);
+      }
+
+    } catch (error) {
+      console.error('处理模板失败:', error);
+      return {
+        success: false,
+        error: `模板处理失败: ${error instanceof Error ? error.message : '未知错误'}`
+      };
+    }
+  }
+
+  /**
+   * 处理Word模板
+   */
+  private async processWordTemplate(
+    templateContent: TemplateContent,
+    variablesData: Record<string, unknown>
+  ): Promise<ProcessedTemplate> {
+    try {
+      if (!templateContent.markdown) {
+        throw new Error('Word模板Markdown内容不存在');
       }
 
       // 准备变量替换
@@ -117,12 +207,62 @@ export class TemplateStorage {
         content: processedHtml,
         markdown: processedMarkdown
       };
-
     } catch (error) {
-      console.error('处理模板失败:', error);
       return {
         success: false,
-        error: `模板处理失败: ${error instanceof Error ? error.message : '未知错误'}`
+        error: `Word模板处理失败: ${error instanceof Error ? error.message : '未知错误'}`
+      };
+    }
+  }
+
+  /**
+   * 处理PDF模板
+   */
+  private async processPDFTemplate(
+    templateContent: TemplateContent,
+    variablesData: Record<string, unknown>
+  ): Promise<ProcessedTemplate> {
+    try {
+      if (!templateContent.pdfData) {
+        throw new Error('PDF模板数据不存在');
+      }
+
+      console.log('开始处理PDF模板，使用格式保真系统');
+
+      // 准备PDF变量替换
+      const pdfReplacements = this.preparePDFVariableReplacements(variablesData);
+
+      // 使用PDF格式保真生成器
+      const genResult = await pdfFormatPreservingGenerator.generateWordFromPDF(
+        templateContent.pdfData,
+        pdfReplacements,
+        {
+          preserveFormatting: true,
+          fontFamily: '宋体',
+          fontSize: 12,
+          pageMargins: { top: 720, bottom: 720, left: 720, right: 720 }
+        }
+      );
+
+      if (!genResult.success) {
+        throw new Error(genResult.error || 'PDF模板处理失败');
+      }
+
+      console.log('PDF模板处理完成，生成Word文档');
+
+      // 返回处理结果，包含生成的内容
+      return {
+        success: true,
+        content: templateContent.pdfData.content || 'PDF模板生成的内容',
+        markdown: templateContent.pdfData.content || '',
+        buffer: genResult.buffer
+      };
+
+    } catch (error) {
+      console.error('PDF模板处理失败:', error);
+      return {
+        success: false,
+        error: `PDF模板处理失败: ${error instanceof Error ? error.message : '未知错误'}`
       };
     }
   }
@@ -157,7 +297,79 @@ export class TemplateStorage {
   }
 
   /**
-   * 准备变量替换数组
+   * 准备PDF变量替换数组
+   */
+  private preparePDFVariableReplacements(variablesData: Record<string, unknown>): PDFVariableReplacement[] {
+    const replacements: PDFVariableReplacement[] = [];
+
+    // 常用变量映射
+    const commonMappings: Record<string, string> = {
+      '甲方名称': 'buyerName',
+      '乙方名称': 'supplierName',
+      '合同金额': 'totalAmount',
+      '签订日期': 'signingDate',
+      '签订地点': 'signingLocation',
+      '甲方': 'buyerName',
+      '乙方': 'supplierName',
+      '总金额': 'totalAmount',
+      '日期': 'signingDate',
+      '地点': 'signingLocation'
+    };
+
+    // 处理映射的变量
+    for (const [chineseName, englishName] of Object.entries(commonMappings)) {
+      const value = variablesData[englishName] || variablesData[chineseName];
+      if (value !== undefined) {
+        // 添加中文占位符
+        replacements.push({
+          placeholder: `[${chineseName}]`,
+          value: String(value),
+          type: this.inferVariableType(chineseName, value)
+        });
+        replacements.push({
+          placeholder: `{{${chineseName}}}`,
+          value: String(value),
+          type: this.inferVariableType(chineseName, value)
+        });
+        replacements.push({
+          placeholder: `\${${chineseName}}`,
+          value: String(value),
+          type: this.inferVariableType(chineseName, value)
+        });
+      }
+    }
+
+    // 处理其他变量
+    for (const [key, value] of Object.entries(variablesData)) {
+      if (value !== undefined && !Object.values(commonMappings).includes(key)) {
+        const strValue = String(value);
+        const varType = this.inferVariableType(key, value);
+
+        // 添加多种格式的占位符
+        replacements.push({
+          placeholder: `[${key}]`,
+          value: strValue,
+          type: varType
+        });
+        replacements.push({
+          placeholder: `{{${key}}}`,
+          value: strValue,
+          type: varType
+        });
+        replacements.push({
+          placeholder: `\${${key}}`,
+          value: strValue,
+          type: varType
+        });
+      }
+    }
+
+    console.log(`准备了 ${replacements.length} 个PDF变量替换`);
+    return replacements;
+  }
+
+  /**
+   * 准备变量替换数据
    */
   private prepareVariableReplacements(variablesData: Record<string, unknown>): VariableReplacement[] {
     const replacements: VariableReplacement[] = [];

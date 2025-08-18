@@ -1,10 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 启用实验性功能
-  experimental: {
-    // 启用服务器组件
-    serverComponentsExternalPackages: ['mammoth', 'turndown', 'markdown-it'],
-  },
+  // 服务器外部包配置
+  serverExternalPackages: ['mammoth', 'turndown', 'markdown-it', 'pdf-parse', 'pdf2pic'],
   
   // Webpack 配置
   webpack: (config, { isServer }) => {
@@ -43,13 +40,7 @@ const nextConfig = {
     ],
   },
   
-  // API 路由配置
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-    responseLimit: '10mb',
-  },
+  // API 路由配置已移至 app/api 路由处理器中
   
   // 输出配置（适用于 Vercel）
   output: 'standalone',

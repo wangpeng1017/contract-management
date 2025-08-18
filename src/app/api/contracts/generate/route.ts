@@ -56,14 +56,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 使用新的模板处理系统生成合同内容
+    // 使用新的模板处理系统生成合同内容（支持PDF和Word模板）
     console.log('开始生成合同内容，使用格式保真系统');
     const processResult = await templateStorage.processTemplateForContract(templateId, variablesData);
 
     let contractContent: string;
+    let generatedBuffer: Buffer | undefined;
+
     if (processResult.success && processResult.content) {
       contractContent = processResult.content;
-      console.log('使用格式保真系统生成成功');
+      generatedBuffer = processResult.buffer; // PDF模板可能返回Buffer
+      console.log('使用格式保真系统生成成功，类型:', generatedBuffer ? 'PDF模板' : 'Word模板');
     } else {
       console.log('格式保真系统失败，使用传统方法:', processResult.error);
       // 回退到传统方法
