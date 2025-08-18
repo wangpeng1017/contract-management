@@ -177,6 +177,9 @@ export default function Home() {
             <Button size="lg" variant="outline" asChild>
               <Link href="/test">功能测试</Link>
             </Button>
+            <Button size="lg" variant="outline" asChild>
+              <Link href="/test-feishu">飞书集成</Link>
+            </Button>
           </div>
         </div>
       </section>

@@ -143,19 +143,29 @@ class PDFFormatPreservingGenerator {
   private replaceVariables(content: string, variables: VariableReplacement[]): string {
     let processedContent = content;
 
+    console.log('开始变量替换，原始内容长度:', content.length);
+    console.log('变量数量:', variables.length);
+
     for (const variable of variables) {
       const { placeholder, value, type } = variable;
-      
+
       // 格式化值
       const formattedValue = this.formatValue(value, type);
-      
+
       // 替换所有出现的占位符
       const regex = new RegExp(this.escapeRegExp(placeholder), 'g');
+      const beforeLength = processedContent.length;
       processedContent = processedContent.replace(regex, formattedValue);
-      
-      console.log(`变量替换: ${placeholder} → ${formattedValue}`);
+      const afterLength = processedContent.length;
+
+      if (beforeLength !== afterLength) {
+        console.log(`变量替换成功: ${placeholder} → ${formattedValue}`);
+      } else {
+        console.log(`变量未找到: ${placeholder}`);
+      }
     }
 
+    console.log('变量替换完成，处理后内容长度:', processedContent.length);
     return processedContent;
   }
 
@@ -244,36 +254,72 @@ class PDFFormatPreservingGenerator {
   private createSimpleLayout(content: string): LayoutElement[] {
     const elements: LayoutElement[] = [];
     const lines = content.split('\n').filter(line => line.trim());
-    
+
+    console.log(`创建简单布局，处理 ${lines.length} 行内容`);
+
     let currentY = 0;
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
 
+      // 检测不同类型的内容
+      const isMainTitle = this.isMainTitle(line);
       const isHeader = this.isHeaderLine(line);
+      const isSubHeader = this.isSubHeaderLine(line);
       const isTableRow = this.isTableLine(line);
+      const isClause = this.isClauseLine(line);
+
+      let elementType: 'paragraph' | 'table' | 'header' | 'footer' | 'image' = 'paragraph';
+      let fontSize = 12;
+      let bold = false;
+      let alignment = AlignmentType.LEFT;
+
+      if (isMainTitle) {
+        elementType = 'header';
+        fontSize = 16;
+        bold = true;
+        alignment = AlignmentType.CENTER;
+      } else if (isHeader) {
+        elementType = 'header';
+        fontSize = 14;
+        bold = true;
+        alignment = AlignmentType.CENTER;
+      } else if (isSubHeader) {
+        elementType = 'header';
+        fontSize = 13;
+        bold = true;
+        alignment = AlignmentType.LEFT;
+      } else if (isClause) {
+        fontSize = 12;
+        bold = true;
+        alignment = AlignmentType.LEFT;
+      } else if (isTableRow) {
+        elementType = 'table';
+        fontSize = 11;
+      }
 
       elements.push({
-        type: isHeader ? 'header' : isTableRow ? 'table' : 'paragraph',
+        type: elementType,
         content: line,
         style: {
-          fontSize: isHeader ? 14 : 12,
+          fontSize,
           fontName: '宋体',
-          bold: isHeader,
-          alignment: isHeader ? AlignmentType.CENTER : AlignmentType.LEFT
+          bold,
+          alignment
         },
         position: {
           x: 50,
           y: currentY,
           width: 500,
-          height: isHeader ? 20 : 16
+          height: fontSize + 4
         },
-        pageNumber: Math.floor(i / 40) + 1 // 假设每页40行
+        pageNumber: Math.floor(i / 35) + 1 // 每页35行
       });
 
-      currentY += isHeader ? 25 : 20;
+      currentY += fontSize + 8;
     }
 
+    console.log(`布局创建完成，生成 ${elements.length} 个元素`);
     return elements;
   }
 

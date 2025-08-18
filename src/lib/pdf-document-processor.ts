@@ -168,8 +168,16 @@ class PDFDocumentProcessor {
     try {
       console.log('开始解析PDF Buffer, 大小:', buffer.length);
 
-      // 第一步：提取基本文本内容
-      const pdfData = await pdf(buffer);
+      // 第一步：提取基本文本内容，使用更好的配置
+      const pdfData = await pdf(buffer, {
+        // 保持原始格式
+        normalizeWhitespace: false,
+        // 不合并页面
+        pagerender: undefined,
+        // 最大页面数
+        max: 0
+      });
+
       console.log('PDF基本信息提取完成:', {
         pages: pdfData.numpages,
         textLength: pdfData.text.length
@@ -178,17 +186,22 @@ class PDFDocumentProcessor {
       // 第二步：提取元数据
       const metadata = this.extractMetadata(pdfData);
 
-      // 第三步：生成页面图像（用于布局分析）
+      // 第三步：处理和清理文本内容
+      const cleanedContent = this.cleanAndStructureText(pdfData.text);
+      console.log('文本清理完成，长度:', cleanedContent.length);
+
+      // 第四步：生成页面图像（用于布局分析）
       const pageImages = await this.generatePageImages(buffer);
 
-      // 第四步：分析布局结构
+      // 第五步：分析布局结构
       const layoutInfo = await this.analyzeLayout(pdfData, pageImages);
 
-      // 第五步：识别变量占位符
+      // 第六步：识别变量占位符
       const variables = this.identifyVariables(pdfData.text, layoutInfo);
 
       console.log('PDF处理完成:', {
-        textLength: pdfData.text.length,
+        originalTextLength: pdfData.text.length,
+        cleanedTextLength: cleanedContent.length,
         pageCount: metadata.pageCount,
         variableCount: variables.length,
         paragraphCount: layoutInfo.paragraphs.length,
@@ -197,7 +210,7 @@ class PDFDocumentProcessor {
 
       return {
         success: true,
-        content: pdfData.text,
+        content: cleanedContent, // 使用清理后的内容
         metadata,
         layoutInfo,
         pages: await this.extractPageData(pdfData, pageImages)
@@ -226,6 +239,78 @@ class PDFDocumentProcessor {
         error: `文件读取失败: ${error instanceof Error ? error.message : '未知错误'}`
       };
     }
+  }
+
+  /**
+   * 清理和结构化文本内容
+   */
+  private cleanAndStructureText(rawText: string): string {
+    console.log('开始清理和结构化文本内容...');
+
+    // 清理文本
+    let cleanText = rawText
+      .replace(/\r\n/g, '\n')  // 统一换行符
+      .replace(/\r/g, '\n')    // 统一换行符
+      .replace(/\f/g, '\n')    // 替换换页符
+      .replace(/\t/g, ' ')     // 替换制表符
+      .replace(/ +/g, ' ')     // 合并多个空格
+      .trim();
+
+    // 分割成行并过滤空行
+    const lines = cleanText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+    console.log(`原始行数: ${lines.length}`);
+
+    // 重新组织内容，保持原始结构
+    const structuredLines: string[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      // 跳过页码行
+      if (line.match(/第\s*\d+\s*页\s*共\s*\d+\s*页/) || line.match(/^\d+\s*\/\s*\d+$/)) {
+        continue;
+      }
+
+      // 跳过格式设置行
+      if (line.includes('设置了格式:') || line.includes('突出显示')) {
+        continue;
+      }
+
+      // 检测标题行
+      if (this.isTitle(line)) {
+        structuredLines.push(`\n# ${line}\n`);
+      }
+      // 检测条款编号
+      else if (this.isClause(line)) {
+        structuredLines.push(`\n## ${line}\n`);
+      }
+      // 检测子条款
+      else if (this.isSubClause(line)) {
+        structuredLines.push(`\n### ${line}\n`);
+      }
+      // 普通内容行
+      else {
+        structuredLines.push(line);
+      }
+    }
+
+    const result = structuredLines.join('\n').trim();
+    console.log(`结构化后长度: ${result.length}`);
+
+    return result;
+  }
+
+  /**
+   * 判断是否为子条款行
+   */
+  private isSubClause(line: string): boolean {
+    return (
+      line.match(/^\d+\.\d+/) ||  // 2.1, 2.2 等
+      line.match(/^[（(]\d+[）)]/) ||  // (1), (2) 等
+      line.match(/^[一二三四五六七八九十]+[、．]/) ||  // 一、二、等
+      line.match(/^\d+[）)]/)  // 1) 2) 等
+    );
   }
 
   /**
