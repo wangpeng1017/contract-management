@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/database';
+import { templateStorage } from '@/lib/template-storage';
 
 // POST /api/contracts/generate - 生成合同
 export async function POST(request: NextRequest) {
@@ -55,8 +56,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 生成合同内容
-    const contractContent = await generateContractContent(template, variablesData);
+    // 使用新的模板处理系统生成合同内容
+    console.log('开始生成合同内容，使用格式保真系统');
+    const processResult = await templateStorage.processTemplateForContract(templateId, variablesData);
+
+    let contractContent: string;
+    if (processResult.success && processResult.content) {
+      contractContent = processResult.content;
+      console.log('使用格式保真系统生成成功');
+    } else {
+      console.log('格式保真系统失败，使用传统方法:', processResult.error);
+      // 回退到传统方法
+      contractContent = await generateContractContent(template, variablesData);
+    }
 
     // 保存生成的合同
     const generatedContract = await prisma.generatedContract.create({

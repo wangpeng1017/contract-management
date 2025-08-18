@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/database';
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType } from 'docx';
+import { formatPreservingGenerator } from '@/lib/format-preserving-generator';
+import { templateStorage } from '@/lib/template-storage';
 
 export async function GET(
   request: NextRequest,
@@ -28,8 +30,67 @@ export async function GET(
     const variablesData = contract.variablesData as Record<string, unknown>;
     const goodsItems = (variablesData?.goodsItems as Array<Record<string, unknown>>) || [];
 
-    // 创建Word文档
-    const doc = new Document({
+    console.log('开始生成Word文档，尝试使用格式保真系统');
+
+    // 尝试使用格式保真系统重新生成
+    const processResult = await templateStorage.processTemplateForContract(
+      contract.templateId || '',
+      variablesData
+    );
+
+    let buffer: Buffer;
+
+    if (processResult.success && processResult.markdown) {
+      console.log('使用格式保真系统生成Word文档');
+      // 使用格式保真生成器
+      const genResult = await formatPreservingGenerator.generateWordFromMarkdown(
+        processResult.markdown,
+        {
+          preserveFormatting: true,
+          fontFamily: '宋体',
+          fontSize: 24,
+          pageMargins: { top: 720, bottom: 720, left: 720, right: 720 }
+        }
+      );
+
+      if (genResult.success && genResult.buffer) {
+        buffer = genResult.buffer;
+      } else {
+        console.log('格式保真生成失败，使用传统方法:', genResult.error);
+        // 回退到传统方法
+        buffer = await generateTraditionalWordDoc(contract, variablesData, goodsItems);
+      }
+    } else {
+      console.log('格式保真系统不可用，使用传统方法:', processResult.error);
+      // 回退到传统方法
+      buffer = await generateTraditionalWordDoc(contract, variablesData, goodsItems);
+    }
+
+    // 返回Word文档
+    return new NextResponse(new Uint8Array(buffer), {
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'Content-Disposition': `attachment; filename="${contract.template?.name || 'contract'}_${new Date().toISOString().split('T')[0]}.docx"`,
+      },
+    });
+
+  } catch (error) {
+    console.error('Word导出失败:', error);
+    return NextResponse.json(
+      { success: false, error: 'Word导出失败' },
+      { status: 500 }
+    );
+  }
+}
+
+// 传统Word文档生成方法
+async function generateTraditionalWordDoc(
+  contract: any,
+  variablesData: Record<string, unknown>,
+  goodsItems: Array<Record<string, unknown>>
+): Promise<Buffer> {
+  // 创建Word文档
+  const doc = new Document({
       sections: [
         {
           properties: {},
@@ -48,7 +109,7 @@ export async function GET(
             }),
 
             // 合同内容
-            ...contract.content.split('\n').map(line => 
+            ...contract.content.split('\n').map((line: string) =>
               new Paragraph({
                 children: [
                   new TextRun({
@@ -170,21 +231,5 @@ export async function GET(
     });
 
     // 生成Word文档
-    const buffer = await Packer.toBuffer(doc);
-
-    // 返回Word文档
-    return new NextResponse(new Uint8Array(buffer), {
-      headers: {
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'Content-Disposition': `attachment; filename="${contract.template?.name || 'contract'}_${new Date().toISOString().split('T')[0]}.docx"`,
-      },
-    });
-
-  } catch (error) {
-    console.error('Word导出失败:', error);
-    return NextResponse.json(
-      { success: false, error: 'Word导出失败' },
-      { status: 500 }
-    );
-  }
+    return await Packer.toBuffer(doc);
 }
