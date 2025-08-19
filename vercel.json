@@ -3,12 +3,5 @@
     "src/app/api/**/*.ts": {
       "maxDuration": 30
     }
-  },
-  "env": {
-    "BLOB_READ_WRITE_TOKEN": "@blob_read_write_token",
-    "POSTGRES_URL": "@postgres_url",
-    "PRISMA_DATABASE_URL": "@prisma_database_url",
-    "DATABASE_URL": "@database_url",
-    "GOOGLE_GEMINI_API_KEY": "@google_gemini_api_key"
   }
 }
