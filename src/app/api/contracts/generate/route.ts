@@ -6,16 +6,70 @@ import { templateStorage } from '@/lib/template-storage';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { templateId, variablesData, templateName } = body;
+    const { templateId, variablesData, templateName, useFeishuApi = false } = body;
 
-    if (!templateId || !variablesData) {
+    console.log('收到合同生成请求:', {
+      templateId,
+      templateName,
+      useFeishuApi,
+      variablesDataKeys: variablesData ? Object.keys(variablesData) : [],
+      variablesDataCount: variablesData ? Object.keys(variablesData).length : 0
+    });
+
+    if (!templateId) {
       return NextResponse.json(
         {
           success: false,
-          error: '模板ID和变量数据不能为空'
+          error: '模板ID不能为空'
         },
         { status: 400 }
       );
+    }
+
+    if (!variablesData || typeof variablesData !== 'object') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: '变量数据不能为空且必须是对象格式'
+        },
+        { status: 400 }
+      );
+    }
+
+    // 如果启用飞书API，转发到飞书端点
+    if (useFeishuApi) {
+      console.log('转发到飞书API端点');
+
+      const feishuResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/feishu/contracts/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          templateId,
+          variables: variablesData,
+          contractTitle: templateName || '合同文档',
+          contractData: { templateName }
+        })
+      });
+
+      const feishuResult = await feishuResponse.json();
+
+      if (feishuResult.success) {
+        console.log('飞书API生成成功');
+        return NextResponse.json({
+          success: true,
+          data: {
+            id: feishuResult.contractId,
+            downloadUrl: feishuResult.downloadUrl,
+            isFeishuGenerated: true
+          },
+          message: '使用飞书API生成合同成功'
+        });
+      } else {
+        console.log('飞书API生成失败，回退到传统方法:', feishuResult.error);
+        // 继续使用传统方法
+      }
     }
 
     // 获取模板信息

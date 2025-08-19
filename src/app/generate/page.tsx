@@ -122,6 +122,7 @@ function GeneratePageContent() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [isCompactLayout, setIsCompactLayout] = useState(false);
+  const [useFeishuApi, setUseFeishuApi] = useState(true); // 默认启用飞书API
   const [generatedContract, setGeneratedContract] = useState<{
     contractId: string;
     content: string;
@@ -426,7 +427,8 @@ function GeneratePageContent() {
         body: JSON.stringify({
           templateId: template?.id,
           templateName: template?.name,
-          variablesData: mappedVariablesData
+          variablesData: mappedVariablesData,
+          useFeishuApi: useFeishuApi
         })
       });
       
@@ -1117,6 +1119,19 @@ function GeneratePageContent() {
                       <Maximize2 className="h-4 w-4" />
                       紧凑布局
                     </Button>
+                  </div>
+
+                  <div className="flex items-center gap-2 ml-4 border-l pl-4">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={useFeishuApi}
+                        onChange={(e) => setUseFeishuApi(e.target.checked)}
+                        className="rounded"
+                      />
+                      <span className="text-blue-600 font-medium">启用飞书API</span>
+                      <span className="text-xs text-gray-500">(完美格式保真)</span>
+                    </label>
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-blue-600">{progress}%</div>

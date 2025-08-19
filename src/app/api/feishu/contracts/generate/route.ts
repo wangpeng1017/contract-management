@@ -12,18 +12,34 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { templateId, variables, contractTitle, contractData } = body;
 
-    // 验证输入
+    console.log('请求参数详情:', {
+      templateId,
+      contractTitle,
+      variablesCount: variables ? Object.keys(variables).length : 0,
+      variablesKeys: variables ? Object.keys(variables) : [],
+      contractData
+    });
+
+    // 增强的参数验证
     if (!templateId) {
       return NextResponse.json({
         success: false,
-        error: '请提供模板ID'
+        error: '模板ID不能为空',
+        details: { received: { templateId } }
       }, { status: 400 });
     }
 
-    if (!variables || typeof variables !== 'object') {
+    if (!variables || typeof variables !== 'object' || Object.keys(variables).length === 0) {
       return NextResponse.json({
         success: false,
-        error: '请提供变量数据'
+        error: '变量数据不能为空且必须包含至少一个变量',
+        details: {
+          received: {
+            variables,
+            type: typeof variables,
+            keys: variables ? Object.keys(variables) : []
+          }
+        }
       }, { status: 400 });
     }
 
