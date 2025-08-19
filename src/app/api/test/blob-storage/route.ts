@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { put, list } from '@vercel/blob';
 
 // GET /api/test/blob-storage - 测试Blob存储配置
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(_request: NextRequest) {
   try {
     console.log('开始测试Blob存储配置...');

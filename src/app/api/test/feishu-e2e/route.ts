@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 获取模板信息
-    const template = await prisma.template.findUnique({
+    const template = await prisma.contractTemplate.findUnique({
       where: { id: templateId },
       include: { variables: true }
     });

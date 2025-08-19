@@ -186,6 +186,7 @@ export const formatFidelityChecks: FormatFidelityCheck[] = [
   {
     name: "字体一致性检查",
     description: "验证生成的合同是否保持原模板的字体样式",
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     checkFunction: (_original, _generated) => {
       // 这里应该实现实际的字体检查逻辑
       // 目前返回模拟结果
@@ -200,6 +201,7 @@ export const formatFidelityChecks: FormatFidelityCheck[] = [
   {
     name: "布局结构检查",
     description: "验证页面布局、段落结构是否保持一致",
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     checkFunction: (_original, _generated) => {
       return {
         passed: true,
@@ -212,6 +214,7 @@ export const formatFidelityChecks: FormatFidelityCheck[] = [
   {
     name: "变量替换准确性",
     description: "验证所有变量是否正确替换且不影响周围格式",
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     checkFunction: (_original, _generated) => {
       return {
         passed: true,
@@ -224,6 +227,7 @@ export const formatFidelityChecks: FormatFidelityCheck[] = [
   {
     name: "表格格式保真",
     description: "验证表格边框、对齐方式等格式是否保持",
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     checkFunction: (_original, _generated) => {
       return {
         passed: true,
