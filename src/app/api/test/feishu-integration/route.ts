@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { feishuTemplateStorage } from '@/lib/feishu-template-storage';
-import { TestResult, FeishuIntegrationTestResult, TestSummary } from '@/types/test-types';
+import { TestResult } from '@/types/test-types';
 
 /**
  * 飞书集成测试API

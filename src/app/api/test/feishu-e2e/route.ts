@@ -7,8 +7,6 @@ import {
   E2ETestSummary,
   TestCaseValidationResult,
   ContractGenerationResult,
-  FormatFidelityResult,
-  Template,
   TemplateVariable
 } from '@/types/test-types';
 

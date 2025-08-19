@@ -53,7 +53,7 @@ export async function GET(_request: NextRequest) {
         uploadResult: {
           url: uploadResult.url,
           pathname: uploadResult.pathname,
-          size: uploadResult.size
+          size: testFile.size
         },
         listResult: {
           count: listResult.blobs.length,
@@ -119,8 +119,8 @@ export async function POST(request: NextRequest) {
       data: {
         url: result.url,
         pathname: result.pathname,
-        size: result.size,
-        uploadedAt: result.uploadedAt
+        size: file.size,
+        uploadedAt: new Date().toISOString()
       }
     });
 
