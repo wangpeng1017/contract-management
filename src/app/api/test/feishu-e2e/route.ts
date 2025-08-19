@@ -64,7 +64,17 @@ export async function POST(request: NextRequest) {
       
       try {
         // 1. 验证测试数据
-        const validationResult = validateTestCase(testCase, template.variables);
+        // 转换Prisma结果以匹配TemplateVariable接口
+        const templateVariables: TemplateVariable[] = template.variables.map(v => ({
+          id: v.id,
+          name: v.name,
+          type: v.type,
+          description: v.description ?? undefined,
+          defaultValue: v.defaultValue ?? undefined,
+          required: v.required,
+          orderIndex: v.orderIndex
+        }));
+        const validationResult = validateTestCase(testCase, templateVariables);
         if (!validationResult.valid) {
           testResults.push({
             testCase: testCase.name,
