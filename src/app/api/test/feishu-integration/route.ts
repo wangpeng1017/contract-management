@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { feishuTemplateStorage } from '@/lib/feishu-template-storage';
+import { TestResult, FeishuIntegrationTestResult, TestSummary } from '@/types/test-types';
 
 /**
  * 飞书集成测试API
@@ -13,12 +14,7 @@ export async function GET() {
     
     const testResults = {
       timestamp: new Date().toISOString(),
-      tests: [] as Array<{
-        name: string;
-        status: 'success' | 'error' | 'warning';
-        message: string;
-        details?: any;
-      }>
+      tests: [] as TestResult[]
     };
 
     // 1. 测试飞书客户端初始化

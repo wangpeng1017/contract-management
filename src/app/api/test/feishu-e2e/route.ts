@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { contractTestCases, formatFidelityChecks, generateTestReport } from '@/lib/test-data/contract-test-cases';
 import { feishuTemplateStorage } from '@/lib/feishu-template-storage';
 import { prisma } from '@/lib/database';
+import {
+  E2ETestResult,
+  E2ETestSummary,
+  TestCaseValidationResult,
+  ContractGenerationResult,
+  FormatFidelityResult,
+  Template,
+  TemplateVariable
+} from '@/types/test-types';
 
 /**
  * 飞书API端到端测试
@@ -144,7 +153,7 @@ export async function POST(request: NextRequest) {
 /**
  * 验证测试用例数据
  */
-function validateTestCase(testCase: any, templateVariables: any[]) {
+function validateTestCase(testCase: typeof contractTestCases[0], templateVariables: TemplateVariable[]): TestCaseValidationResult {
   const errors = [];
   const templateVarNames = templateVariables.map(v => v.name);
 
@@ -179,7 +188,7 @@ function validateTestCase(testCase: any, templateVariables: any[]) {
 /**
  * 使用飞书API生成合同
  */
-async function generateContractWithFeishu(testCase: any) {
+async function generateContractWithFeishu(testCase: typeof contractTestCases[0]): Promise<ContractGenerationResult> {
   try {
     const result = await feishuTemplateStorage.generateContract({
       templateId: testCase.templateId,
@@ -233,7 +242,7 @@ async function performFidelityChecks(originalTemplatePath: string, generatedCont
 /**
  * 生成测试摘要
  */
-function generateTestSummary(testResults: any[]) {
+function generateTestSummary(testResults: E2ETestResult[]): E2ETestSummary {
   const total = testResults.length;
   const passed = testResults.filter(r => r.success).length;
   const failed = total - passed;

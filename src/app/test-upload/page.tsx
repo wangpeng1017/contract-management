@@ -4,12 +4,13 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { BlobStorageTestResult } from '@/types/test-types';
 
 export default function TestUploadPage() {
   const [testing, setTesting] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [results, setResults] = useState<any>(null);
-  const [uploadResult, setUploadResult] = useState<any>(null);
+  const [results, setResults] = useState<BlobStorageTestResult | null>(null);
+  const [uploadResult, setUploadResult] = useState<BlobStorageTestResult | null>(null);
 
   // 测试Blob存储配置
   const testBlobStorage = async () => {

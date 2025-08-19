@@ -2,6 +2,8 @@
  * 飞书API集成测试用例数据
  */
 
+import { ContractGenerationResult, FormatFidelityResult, E2ETestResult } from '@/types/test-types';
+
 export interface ContractTestCase {
   name: string;
   description: string;
@@ -184,7 +186,7 @@ export const formatFidelityChecks: FormatFidelityCheck[] = [
   {
     name: "字体一致性检查",
     description: "验证生成的合同是否保持原模板的字体样式",
-    checkFunction: (original, generated) => {
+    checkFunction: (_original, _generated) => {
       // 这里应该实现实际的字体检查逻辑
       // 目前返回模拟结果
       return {
@@ -198,7 +200,7 @@ export const formatFidelityChecks: FormatFidelityCheck[] = [
   {
     name: "布局结构检查",
     description: "验证页面布局、段落结构是否保持一致",
-    checkFunction: (original, generated) => {
+    checkFunction: (_original, _generated) => {
       return {
         passed: true,
         score: 98,
@@ -210,7 +212,7 @@ export const formatFidelityChecks: FormatFidelityCheck[] = [
   {
     name: "变量替换准确性",
     description: "验证所有变量是否正确替换且不影响周围格式",
-    checkFunction: (original, generated) => {
+    checkFunction: (_original, _generated) => {
       return {
         passed: true,
         score: 100,
@@ -222,7 +224,7 @@ export const formatFidelityChecks: FormatFidelityCheck[] = [
   {
     name: "表格格式保真",
     description: "验证表格边框、对齐方式等格式是否保持",
-    checkFunction: (original, generated) => {
+    checkFunction: (_original, _generated) => {
       return {
         passed: true,
         score: 92,
@@ -237,9 +239,9 @@ export const formatFidelityChecks: FormatFidelityCheck[] = [
  */
 export function generateTestReport(
   testCase: ContractTestCase,
-  result: any,
-  fidelityChecks: Array<{ name: string; passed: boolean; score: number; details: string }>
-) {
+  result: ContractGenerationResult,
+  fidelityChecks: FormatFidelityResult[]
+): E2ETestResult {
   const overallScore = fidelityChecks.reduce((sum, check) => sum + check.score, 0) / fidelityChecks.length;
   const allPassed = fidelityChecks.every(check => check.passed);
   
