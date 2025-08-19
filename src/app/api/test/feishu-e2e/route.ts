@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { contractTestCases, formatFidelityChecks, generateTestReport } from '@/lib/test-data/contract-test-cases';
 import { feishuTemplateStorage } from '@/lib/feishu-template-storage';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/database';
 
 /**
  * 飞书API端到端测试
