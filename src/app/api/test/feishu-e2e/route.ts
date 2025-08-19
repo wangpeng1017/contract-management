@@ -88,12 +88,12 @@ export async function POST(request: NextRequest) {
 
         // 2. 执行合同生成
         const contractResult = await generateContractWithFeishu(testCase);
-        
-        if (!contractResult.success) {
+
+        if (!contractResult.success || !contractResult.data) {
           testResults.push({
             testCase: testCase.name,
             success: false,
-            error: `合同生成失败: ${contractResult.error}`,
+            error: `合同生成失败: ${contractResult.error || '生成结果数据缺失'}`,
             timestamp: new Date().toISOString()
           });
           overallSuccess = false;
