@@ -73,18 +73,33 @@ export async function POST(request: NextRequest) {
     }
 
     // 获取模板信息
-    const template = await prisma.contractTemplate.findUnique({
-      where: { id: templateId },
-      include: {
-        variables: {
-          orderBy: {
-            orderIndex: 'asc'
+    console.log('开始获取模板信息:', templateId);
+    let template;
+    try {
+      template = await prisma.contractTemplate.findUnique({
+        where: { id: templateId },
+        include: {
+          variables: {
+            orderBy: {
+              orderIndex: 'asc'
+            }
           }
         }
-      }
-    });
+      });
+      console.log('模板查询结果:', template ? '找到模板' : '模板不存在', template?.name);
+    } catch (dbError) {
+      console.error('数据库查询失败:', dbError);
+      return NextResponse.json(
+        {
+          success: false,
+          error: `数据库查询失败: ${dbError instanceof Error ? dbError.message : '未知数据库错误'}`
+        },
+        { status: 500 }
+      );
+    }
 
     if (!template) {
+      console.log('模板不存在:', templateId);
       return NextResponse.json(
         {
           success: false,
@@ -112,7 +127,22 @@ export async function POST(request: NextRequest) {
 
     // 使用新的模板处理系统生成合同内容（支持PDF和Word模板）
     console.log('开始生成合同内容，使用格式保真系统');
-    const processResult = await templateStorage.processTemplateForContract(templateId, variablesData);
+    let processResult;
+    try {
+      processResult = await templateStorage.processTemplateForContract(templateId, variablesData);
+      console.log('模板处理结果:', {
+        success: processResult.success,
+        hasContent: !!processResult.content,
+        hasBuffer: !!processResult.buffer,
+        error: processResult.error
+      });
+    } catch (templateError) {
+      console.error('模板处理系统异常:', templateError);
+      processResult = {
+        success: false,
+        error: `模板处理异常: ${templateError instanceof Error ? templateError.message : '未知错误'}`
+      };
+    }
 
     let contractContent: string;
     let generatedBuffer: Buffer | undefined;
@@ -124,20 +154,35 @@ export async function POST(request: NextRequest) {
     } else {
       console.log('格式保真系统失败，使用传统方法:', processResult.error);
       // 回退到传统方法
-      contractContent = await generateContractContent(template, variablesData);
+      try {
+        contractContent = await generateContractContent(template, variablesData);
+        console.log('传统方法生成成功，内容长度:', contractContent.length);
+      } catch (traditionalError) {
+        console.error('传统方法也失败:', traditionalError);
+        throw new Error(`所有生成方法都失败: 格式保真系统 - ${processResult.error}, 传统方法 - ${traditionalError instanceof Error ? traditionalError.message : '未知错误'}`);
+      }
     }
 
     // 保存生成的合同
-    const generatedContract = await prisma.generatedContract.create({
-      data: {
-        templateId,
-        templateName: templateName || template.name,
-        content: contractContent,
-        variablesData,
-        status: 'completed'
-      }
-    });
+    console.log('开始保存生成的合同到数据库');
+    let generatedContract;
+    try {
+      generatedContract = await prisma.generatedContract.create({
+        data: {
+          templateId,
+          templateName: templateName || template.name,
+          content: contractContent,
+          variablesData,
+          status: 'completed'
+        }
+      });
+      console.log('合同保存成功，ID:', generatedContract.id);
+    } catch (saveError) {
+      console.error('保存合同到数据库失败:', saveError);
+      throw new Error(`保存合同失败: ${saveError instanceof Error ? saveError.message : '未知数据库错误'}`);
+    }
 
+    console.log('合同生成完成，返回结果');
     return NextResponse.json({
       success: true,
       data: {
@@ -149,11 +194,24 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('合同生成失败:', error);
+    console.error('合同生成失败 - 详细错误信息:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      templateId,
+      templateName,
+      useFeishuApi,
+      timestamp: new Date().toISOString()
+    });
+
     return NextResponse.json(
       {
         success: false,
-        error: '合同生成失败'
+        error: `合同生成失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        details: process.env.NODE_ENV === 'development' ? {
+          stack: error instanceof Error ? error.stack : undefined,
+          templateId,
+          templateName
+        } : undefined
       },
       { status: 500 }
     );

@@ -13,25 +13,25 @@ try {
     # Create commit
     Write-Host "Creating commit..." -ForegroundColor Yellow
     $commitMessage = @"
-fix: resolve TypeScript type safety error - fix undefined object access
+fix: force redeploy with contract generation improvements
 
-Core fixes:
-- Fixed undefined object access in generateTestSummary function
-- Resolved 'Object is possibly undefined' error in scores.reduce operation
-- Improved score processing logic to ensure only valid number values are processed
-- Enhanced type safety by replacing unsafe filter+map+reduce chain with explicit loop and type checking
+Core improvements deployed:
+- Enhanced error handling in contract generation API with detailed error messages
+- Added database connection test API at /api/test/database
+- Improved template storage system with better fallback mechanisms
+- Added comprehensive logging for debugging production issues
 
 Specific changes:
-- src/app/api/test/feishu-e2e/route.ts (line 263)
-- Replaced unsafe chained operations with explicit type-safe loop
-- Added typeof checks to ensure value type correctness
-- Created explicit number array to avoid type inference issues
+- src/app/api/contracts/generate/route.ts - detailed error handling and logging
+- src/app/api/test/database/route.ts - new database connection test endpoint
+- src/lib/template-storage.ts - improved traditional content generation
+- Enhanced error messages for better production debugging
 
-Expected results:
-- Vercel build passes TypeScript compilation phase
-- Test summary generation function is stable and reliable
-- End-to-end testing system fully functional
-- Complete type safety assurance
+Deployment verification:
+- Database test API should be accessible at /api/test/database
+- Contract generation API should return detailed error messages
+- All previous TypeScript and build issues resolved
+- Ready for production testing and validation
 "@
 
     git commit -m $commitMessage

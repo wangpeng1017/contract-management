@@ -483,17 +483,214 @@ export class TemplateStorage {
   /**
    * 传统内容生成
    */
-  private generateTraditionalContent(template: { name: string }, variablesData: Record<string, unknown>): string {
-    // 这里可以复用原有的getBaseContractTemplate逻辑
-    const content = `
-    <h1>${template.name}</h1>
-    <p>甲方：${variablesData.buyerName || '[甲方名称]'}</p>
-    <p>乙方：${variablesData.supplierName || '[乙方名称]'}</p>
-    <p>合同金额：${variablesData.totalAmount || '[合同金额]'}</p>
-    <p>签订日期：${variablesData.signingDate || '[签订日期]'}</p>
-    `;
+  private generateTraditionalContent(template: { name: string; variables?: Array<{ name: string; description?: string; type?: string; required?: boolean }> }, variablesData: Record<string, unknown>): string {
+    // 使用完整的模板逻辑
+    let baseContent = this.getBaseContractTemplate(template.name);
 
-    return content;
+    // 创建变量映射表
+    const variableMapping = this.createVariableMapping(variablesData);
+
+    // 替换所有占位符
+    for (const [placeholder, value] of Object.entries(variableMapping)) {
+      if (value !== undefined && value !== null && value !== '') {
+        const formattedValue = String(value);
+        const regex = new RegExp(this.escapeRegExp(`[${placeholder}]`), 'g');
+        baseContent = baseContent.replace(regex, formattedValue);
+      }
+    }
+
+    // 替换模板变量（基于template.variables）
+    if (template.variables) {
+      for (const variable of template.variables) {
+        const value = variablesData[variable.name];
+        if (value !== undefined && value !== null) {
+          const formattedValue = this.formatVariableValue(value, variable.type);
+          const placeholder = `[${variable.description || variable.name}]`;
+          baseContent = baseContent.replace(new RegExp(this.escapeRegExp(placeholder), 'g'), formattedValue);
+        }
+      }
+    }
+
+    // 添加生成信息
+    const currentDate = new Date().toLocaleDateString('zh-CN');
+    baseContent += `\n\n--- 合同生成信息 ---\n生成时间：${currentDate}\n模板：${template.name}`;
+
+    return baseContent;
+  }
+
+  /**
+   * 获取基础合同模板
+   */
+  private getBaseContractTemplate(templateName: string): string {
+    // 根据模板名称返回相应的基础模板
+    if (templateName.includes('采购') || templateName.includes('金港')) {
+      return `
+汽车采购合同
+
+甲方（采购方）：[甲方名称]
+统一社会信用代码：[甲方统一社会信用代码]
+地址：[甲方单位地址]
+电话：[甲方电话]
+开户银行：[甲方开户银行]
+银行账户：[甲方银行账户]
+
+乙方（供应方）：[乙方名称]
+统一社会信用代码：[乙方统一社会信用代码]
+地址：[乙方地址]
+电话：[乙方电话]
+开户行：[乙方开户行]
+银行账号：[乙方银行账号]
+
+合同编号：[合同编号]
+签订日期：[签订日期]
+
+一、采购车辆信息
+车型名称：[物品名称]
+指导价：[指导价]元/台
+采购单价（含税）：[单价]元/台
+数量：[数量]辆
+含税总价：[总价]元
+合同总价：[合同金额]（[合同金额大写]）
+
+二、交付条款
+交付地点：[交付地点]
+交付日期：[交付日期]
+验收标准：[验收标准]
+
+三、付款条款
+付款方式：[付款方式]
+定金比例：[定金比例]%
+尾款支付时间：[尾款支付时间]
+
+四、质量保证
+1. 乙方保证所供车辆为全新正品，符合国家相关标准和技术要求。
+2. 车辆质量保证期按国家三包规定执行。
+3. 如发现质量问题，乙方应负责免费维修或更换。
+
+五、违约责任
+1. 甲方逾期付款的，应按逾期金额每日万分之五向乙方支付违约金。
+2. 乙方逾期交货的，应按合同总价每日万分之五向甲方支付违约金。
+3. 任何一方违约造成合同无法履行的，违约方应赔偿对方损失。
+
+六、争议解决
+本合同履行过程中发生的争议，双方应友好协商解决；协商不成的，提交有管辖权的人民法院解决。
+
+七、其他条款
+1. 本合同自双方签字盖章之日起生效。
+2. 本合同一式两份，甲乙双方各执一份，具有同等法律效力。
+3. 本合同未尽事宜，双方可另行协商补充。
+
+甲方（盖章）：_____________    乙方（盖章）：_____________
+法定代表人：_____________    法定代表人：_____________
+签订日期：[签订日期]        签订日期：[签订日期]
+`;
+    } else if (templateName.includes('销售')) {
+      return `
+汽车销售合同
+
+甲方（销售方）：[甲方名称]
+统一社会信用代码：[甲方统一社会信用代码]
+地址：[甲方单位地址]
+电话：[甲方电话]
+
+乙方（购买方）：[乙方名称]
+身份证号：[乙方身份证号]
+地址：[乙方地址]
+电话：[乙方电话]
+
+合同编号：[合同编号]
+签订日期：[签订日期]
+
+一、车辆信息
+车型名称：[物品名称]
+车辆识别代号：[车辆识别代号]
+发动机号：[发动机号]
+车身颜色：[车身颜色]
+销售价格：[合同金额]（[合同金额大写]）
+
+二、交付条款
+交付地点：[交付地点]
+交付日期：[交付日期]
+验收标准：按国家相关标准执行
+
+三、付款条款
+付款方式：[付款方式]
+首付金额：[首付金额]
+贷款金额：[贷款金额]
+付款时间：[付款时间]
+
+甲方（盖章）：_____________    乙方（签字）：_____________
+法定代表人：_____________
+签订日期：[签订日期]        签订日期：[签订日期]
+`;
+    } else {
+      return `
+${templateName}
+
+甲方：[甲方名称]
+乙方：[乙方名称]
+合同金额：[合同金额]
+签订日期：[签订日期]
+
+本合同由甲乙双方在平等、自愿、协商一致的基础上签订，双方应严格履行合同条款。
+
+甲方（盖章）：_____________    乙方（盖章）：_____________
+签订日期：[签订日期]        签订日期：[签订日期]
+`;
+    }
+  }
+
+  /**
+   * 创建变量映射表
+   */
+  private createVariableMapping(variablesData: Record<string, unknown>): Record<string, unknown> {
+    const mapping: Record<string, unknown> = {};
+
+    // 基础映射
+    Object.entries(variablesData).forEach(([key, value]) => {
+      mapping[key] = value;
+    });
+
+    // 特殊映射
+    if (variablesData.buyerName) mapping['甲方名称'] = variablesData.buyerName;
+    if (variablesData.supplierName) mapping['乙方名称'] = variablesData.supplierName;
+    if (variablesData.totalAmount) mapping['合同金额'] = variablesData.totalAmount;
+    if (variablesData.signingDate) mapping['签订日期'] = variablesData.signingDate;
+
+    return mapping;
+  }
+
+  /**
+   * 转义正则表达式特殊字符
+   */
+  private escapeRegExp(string: string): string {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  /**
+   * 格式化变量值
+   */
+  private formatVariableValue(value: unknown, type?: string): string {
+    if (value === null || value === undefined) {
+      return '';
+    }
+
+    if (type === 'date' && value instanceof Date) {
+      return value.toLocaleDateString('zh-CN');
+    }
+
+    if (type === 'currency' || type === 'money') {
+      const num = Number(value);
+      if (!isNaN(num)) {
+        return num.toLocaleString('zh-CN', {
+          style: 'currency',
+          currency: 'CNY',
+          minimumFractionDigits: 2
+        });
+      }
+    }
+
+    return String(value || '');
   }
 }
 
