@@ -255,12 +255,16 @@ function generateTestSummary(testResults: E2ETestResult[]): E2ETestSummary {
   const passed = testResults.filter(r => r.success).length;
   const failed = total - passed;
   
-  const scores = testResults
-    .filter(r => r.overallScore !== undefined)
-    .map(r => r.overallScore);
-  
-  const averageScore = scores.length > 0 
-    ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
+  // 提取所有有效的分数值
+  const validScores: number[] = [];
+  for (const result of testResults) {
+    if (result.overallScore !== undefined && typeof result.overallScore === 'number') {
+      validScores.push(result.overallScore);
+    }
+  }
+
+  const averageScore = validScores.length > 0
+    ? Math.round(validScores.reduce((sum, score) => sum + score, 0) / validScores.length)
     : 0;
 
   return {
